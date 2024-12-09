@@ -104,9 +104,17 @@ Saved results
 from pyscf import gto
 from pyscf.scf import hf
 rhf = hf
+# !LAT #### 2024/11/14 (
+from pyscf.scf import hf_dm
+rhf_dm = hf_dm
+# !LAT #### 2024/11/14 )
 from pyscf.scf import rohf
 from pyscf.scf import hf_symm
 rhf_symm = hf_symm
+# !LAT #### 2024/11/14 (
+from pyscf.scf import hf_symm_dm
+rhf_symm_dm = hf_symm_dm
+# !LAT #### 2024/11/14 )
 from pyscf.scf import uhf
 from pyscf.scf import uhf_symm
 from pyscf.scf import ghf
@@ -121,6 +129,26 @@ from pyscf.scf.uhf import spin_square
 from pyscf.scf.hf import get_init_guess
 from pyscf.scf.addons import *
 
+# !LAT #### 2024/11/14 (
+def HF_DM(mol, *args):
+    if mol.nelectron == 1 or mol.spin == 0:
+        return RHF_DM(mol, *args)
+    else:
+        return UHF_DM(mol, *args)
+HF_DM.__doc__ = '''
+A wrap function to create SCF class (RHF or UHF).\n
+''' + hf_dm.SCF.__doc__
+
+def RHF_DM(mol, *args):
+    if mol.spin == 0:
+        if not mol.symmetry or mol.groupname == 'C1':
+            return rhf_dm.RHF(mol, *args)
+        else:
+            return rhf_symm_dm.RHF(mol, *args)
+    else:
+        return ROHF(mol, *args)
+RHF_DM.__doc__ = hf_dm.RHF.__doc__
+# !LAT #### 2024/11/14 )
 
 def HF(mol, *args):
     if mol.nelectron == 1 or mol.spin == 0:
@@ -140,6 +168,7 @@ def RHF(mol, *args):
     else:
         return ROHF(mol, *args)
 RHF.__doc__ = hf.RHF.__doc__
+
 
 def ROHF(mol, *args):
     if mol.nelectron == 1:
