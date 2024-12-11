@@ -48,9 +48,9 @@ TIGHT_GRAD_CONV_TOL = getattr(__config__, 'scf_hf_kernel_tight_grad_conv_tol', T
 MUTE_CHKFILE = getattr(__config__, 'scf_hf_SCF_mute_chkfile', False)
 
 def kernel(mf, conv_tol=1e-10, conv_tol_grad=None,
-           dump_chk=True, dm0=None, callback=None, conv_check=True, **kwargs):
+           dump_chk=True, dm0=None, callback=None, conv_check=True, dmp_scf=False, **kwargs):
     '''kernel: the SCF driver.
-
+    
     Args:
         mf : an instance of SCF class
             mf object holds all parameters to control SCF.  One can modify its
@@ -117,24 +117,32 @@ You see this error message because of the API updates in pyscf v0.11.
 Keyword argument "init_dm" is replaced by "dm0"''')
     cput0 = (logger.process_clock(), logger.perf_counter())
 
-    #start = timer()
-    t = time.process_time()
-    
     if conv_tol_grad is None:
         conv_tol_grad = numpy.sqrt(conv_tol)
         logger.info(mf, 'Set gradient conv threshold to %g', conv_tol_grad)
 
+    t0 = time.process_time() #LAT
     mol = mf.mol
+    t1 = time.process_time() 
+    print('### timing get mol =',t1 - t0) #LAT
     s1e = mf.get_ovlp(mol)
+    t2 = time.process_time()     
+    print('### timing get ovl =',t2 - t1) #LAT
     
-    # Compute S^-1/2 and S^+1/2 and print check for debug puropose
-    s1e_invsqrt = dmp.invsqrt_ovlp_diag(s1e)
-    s1e_sqrt = numpy.matmul(s1e_invsqrt,s1e)
-    print('trace check =',numpy.trace(numpy.matmul(numpy.matmul(s1e_invsqrt,s1e_invsqrt),s1e)),
-              numpy.shape(s1e))    
-    
-    # Get number total of states and number of doubly occ. states
-    N, _ = numpy.shape(s1e) ; Ne = int(mol.tot_electrons()/2)
+    #LAT#####################################################################
+    #LAT Compute S^-1/2 and S^+1/2 and print check for debug purpose
+    #LAT#####################################################################
+    s1e_invsqrt = dmp.invsqrt_ovlp_diag(s1e) #LAT
+    s1e_sqrt = numpy.matmul(s1e_invsqrt,s1e) #LAT
+    t3 = time.process_time()   
+    print('### timing get ovl inv =',t3 - t2) #LAT
+    #print('### trace check =',numpy.trace(numpy.matmul(numpy.matmul(s1e_invsqrt,s1e_invsqrt),s1e)),#LAT
+    #          numpy.shape(s1e))              #LAT
+    #LAT#####################################################################
+    #LAT Get number total of states and number of doubly occ. states
+    #LAT#####################################################################    
+    N, _ = numpy.shape(s1e) ; Ne = int(mol.tot_electrons()/2) #LAT
+    #LAT#####################################################################
     
     if dm0 is None:
         dm = mf.get_init_guess(mol, mf.init_guess, s1e=s1e, **kwargs)
@@ -148,72 +156,18 @@ Keyword argument "init_dm" is replaced by "dm0"''')
 
     scf_conv = False
     mo_energy = mo_coeff = mo_occ = None
-
-    #end = timer()
-    #print(timedelta(seconds=end-start))
-    print('timing =',time.process_time() - t)
     
-    # Skip SCF iterations. Compute only the total energy of the initial density
-    
-    if mf.max_cycle <= 0:
-        fock = mf.get_fock(h1e, s1e, vhf, dm)  # = h1e + vhf, no DIIS
-        #mo_energy, mo_coeff = mf.eig(fock, s1e)
-        #mo_occ = mf.get_occ(mo_energy, mo_coeff)
+    t4 = time.process_time() 
+    print('### timing get h =',t4 - t3) #LAT
+    print('### dmp_scf=',dmp_scf) #LAT
+    # Skip SCF iterations. Compute only the total energy of the initial density    
+    if mf.max_cycle <= 0 :
+        if ( not dmp_scf ):
+            fock = mf.get_fock(h1e, s1e, vhf, dm)  # = h1e + vhf, no DIIS
+            mo_energy, mo_coeff = mf.eig(fock, s1e)
+            mo_occ = mf.get_occ(mo_energy, mo_coeff)      
+        return scf_conv, e_tot, mo_energy, mo_coeff, mo_occ  
 
-        # Compute dm from eigenstates
-        #dm = mf.make_rdm1(mo_coeff, mo_occ)/2
-
-        
-        # Compute Focktilde =  S^-1/2 F S^-1/2
-        focktilde = numpy.matmul(numpy.matmul(s1e_invsqrt,fock),s1e_invsqrt)
-        
-        #t = time.process_time()
-        #start = timer()
-        #mo_energy, mo_coeff = mf.eig(fock, s1e)
-        #mo_occ = mf.get_occ(mo_energy, mo_coeff)
-
-        # Compute initial dm
-        #print(mo_occ)
-        mo_energy = numpy.zeros((N))
-        X0, mu, lambd, lambd1, lambd2, epsi_0_, epsi_N_, exact_ener, alpha, test = dmp.hpcp_guess(focktilde,N,Ne,mo_energy,mo_occ,'none')
-        
-        # Purify initial dm
-        #X, diag, p = dmp.hpcp(X0,focktilde,Ne)
-        #print('trace(X) =', numpy.trace(X))
-
-        t = time.process_time()
-
-        threshold = 1e-8
-        test = threshold/10
-        maxiter = 50 ; iter_ = 0
-        X = X0
-        #print(numpy.shape(X))
-        while ( test > threshold ) and ( iter_ < maxiter ):
-            old_X = X
-            
-            X, diag, p = dmp.hpcp(X,focktilde,Ne)
-            
-            test = numpy.linalg.norm(X - old_X, ord='fro')
-            #print(test,numpy.shape(X),type(X))
-            print(test,numpy.trace(X))
-            iter_ += 1
-            
-        print('timing =',time.process_time() - t)
-        #end = timer()
-        #print(timedelta(seconds=end-start))
-                  
-        #X = numpy.matmul(numpy.matmul(s1e_invsqrt,X),s1e_invsqrt)
-            
-        #print(dm)
-        #print()
-        #print(X)
-        
-        #print('trace(X) =', numpy.trace(X))
-        #print('trace(dm) =', numpy.trace(dm))
-        #return 0, 0, numpy.zeros((N)), numpy.zeros((N,N)), numpy.zeros((N))  
-        return scf_conv, e_tot, mo_energy, mo_coeff, mo_occ   
-
-        
     if isinstance(mf.diis, lib.diis.DIIS):
         mf_diis = mf.diis
     elif mf.diis:
@@ -247,9 +201,22 @@ Keyword argument "init_dm" is replaced by "dm0"''')
         last_hf_e = e_tot
 
         fock = mf.get_fock(h1e, s1e, vhf, dm, cycle, mf_diis, fock_last=fock_last)
-        mo_energy, mo_coeff = mf.eig(fock, s1e)
-        mo_occ = mf.get_occ(mo_energy, mo_coeff)
-        dm = mf.make_rdm1(mo_coeff, mo_occ)
+
+        if ( not dmp_scf ):
+            mo_energy, mo_coeff = mf.eig(fock, s1e)
+            mo_occ = mf.get_occ(mo_energy, mo_coeff)
+            dm = mf.make_rdm1(mo_coeff, mo_occ)
+        else:        
+            focktilde = numpy.matmul(numpy.matmul(s1e_invsqrt,fock),s1e_invsqrt)        
+            X0 = dmp.hpcp_guess(focktilde,N,Ne)
+            # have to pass thr argment for purification
+            X, niter = dmp.hpcp_purify(X0,Ne,thr=1e-10,maxiter=50)
+            dm = numpy.matmul(numpy.matmul(s1e_invsqrt,X),s1e_invsqrt)*2
+            
+            mo_energy = numpy.zeros((N))
+            mo_coeff = numpy.zeros((N,N))
+            mo_occ = numpy.zeros((N))
+
         vhf = mf.get_veff(mol, dm, dm_last, vhf)
         e_tot = mf.energy_tot(dm, h1e, vhf)
 
@@ -258,10 +225,18 @@ Keyword argument "init_dm" is replaced by "dm0"''')
         # be modified in some methods.
         fock_last = fock
         fock = mf.get_fock(h1e, s1e, vhf, dm)  # = h1e + vhf, no DIIS
-        norm_gorb = numpy.linalg.norm(mf.get_grad(mo_coeff, mo_occ, fock))
+
+        norm_ddm = numpy.linalg.norm(dm-dm_last)        
+        if ( not dmp_scf ):
+            norm_gorb = numpy.linalg.norm(mf.get_grad(mo_coeff, mo_occ, fock))
+        else:
+            logger.info(mf, 'WARNING: dmp_scf => |ddm| is the convergence parameter')
+            # this is not a good way of doing it but avoid many changes
+            norm_gorb = norm_ddm
+                
         if not TIGHT_GRAD_CONV_TOL:
             norm_gorb = norm_gorb / numpy.sqrt(norm_gorb.size)
-        norm_ddm = numpy.linalg.norm(dm-dm_last)
+        
         logger.info(mf, 'cycle= %d E= %.15g  delta_E= %4.3g  |g|= %4.3g  |ddm|= %4.3g',
                     cycle+1, e_tot, e_tot-last_hf_e, norm_gorb, norm_ddm)
 
@@ -280,9 +255,10 @@ Keyword argument "init_dm" is replaced by "dm0"''')
 
         if scf_conv:
             break
-
+        
     mf.cycles = cycle + 1
     if scf_conv and conv_check:
+        logger.info(mf, 'WARNING: dmp_scf => conv_check implies a diagonalisation step')
         # An extra diagonalization, to remove level shift
         #fock = mf.get_fock(h1e, s1e, vhf, dm)  # = h1e + vhf
         mo_energy, mo_coeff = mf.eig(fock, s1e)
@@ -1665,7 +1641,7 @@ class SCF(lib.StreamObject):
             converge threshold.  Default is 1e-9
         conv_tol_grad : float
             gradients converge threshold.  Default is sqrt(conv_tol)
-        max_cycle : int
+             : int
             max number of iterations.  If max_cycle <= 0, SCF iteration will
             be skipped and the kernel function will compute only the total
             energy based on the initial guess. Default value is 50.
@@ -1725,7 +1701,7 @@ class SCF(lib.StreamObject):
         cycles : int
             The number of iteration cycles performed
 
-    Examples:
+            Examples:
 
     >>> mol = gto.M(atom='H 0 0 0; H 0 0 1.1', basis='cc-pvdz')
     >>> mf = scf.hf.SCF(mol)
@@ -1758,6 +1734,7 @@ class SCF(lib.StreamObject):
     direct_scf = getattr(__config__, 'scf_hf_SCF_direct_scf', True)
     direct_scf_tol = getattr(__config__, 'scf_hf_SCF_direct_scf_tol', 1e-13)
     conv_check = getattr(__config__, 'scf_hf_SCF_conv_check', True)
+    dmp_scf = getattr(__config__, 'scf_hf_SCF_dmp_scf', False)
 
     callback = None
 
@@ -1768,14 +1745,14 @@ class SCF(lib.StreamObject):
         'direct_scf', 'direct_scf_tol', 'conv_check', 'callback',
         'mol', 'chkfile', 'mo_energy', 'mo_coeff', 'mo_occ',
         'e_tot', 'converged', 'cycles', 'scf_summary', 'opt',
-        'disp', 'disp_with_3body',
+        'disp', 'disp_with_3body', 'dmp_scf',
     }
 
     def __init__(self, mol):
         if not mol._built:
             sys.stderr.write('Warning: %s must be initialized before calling SCF.\n'
                              'Initialize %s in %s\n' % (mol, mol, self))
-            mol.build()
+            mol.d()
         self.mol = mol
         self.verbose = mol.verbose
         self.max_memory = mol.max_memory
@@ -2064,22 +2041,31 @@ This is the Gaussian fit version as described in doi:10.1063/5.0004046.''')
         '''
         cput0 = (logger.process_clock(), logger.perf_counter())
 
-        self.dump_flags()
-        self.build(self.mol)
+        print('### HERE!0')    
 
+        self.dump_flags()
+
+        print('### HERE!1')    
+        self.build(self.mol)
+        print('### HERE!2')    
         if self.max_cycle > 0 or self.mo_coeff is None:
+            print('### HERE!3')  
             self.converged, self.e_tot, \
                     self.mo_energy, self.mo_coeff, self.mo_occ = \
                     kernel(self, self.conv_tol, self.conv_tol_grad,
                            dm0=dm0, callback=self.callback,
-                           conv_check=self.conv_check, **kwargs)
+                           conv_check=self.conv_check, dm_scf=self.dmp_scf, **kwargs)
+            print('### HERE!4')  
         else:
             # Avoid to update SCF orbitals in the non-SCF initialization
             # (issue #495).  But run regular SCF for initial guess if SCF was
             # not initialized.
+            print('### HERE!5')  
+
             self.e_tot = kernel(self, self.conv_tol, self.conv_tol_grad,
                                 dm0=dm0, callback=self.callback,
-                                conv_check=self.conv_check, **kwargs)[1]
+                                conv_check=self.conv_check, dm_scf=self.dmp_scf, **kwargs)[1]
+        print('### HERE!6')    
 
         logger.timer(self, 'SCF', *cput0)
         self._finalize()
