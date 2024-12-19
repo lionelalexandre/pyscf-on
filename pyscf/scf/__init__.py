@@ -116,6 +116,9 @@ from pyscf.scf import hf_symm_dm
 rhf_symm_dm = hf_symm_dm
 # !LAT #### 2024/11/14 )
 from pyscf.scf import uhf
+# !LAT #### 2024/12/18 (
+from pyscf.scf import uhf_dm
+# !LAT #### 2024/12/18 )
 from pyscf.scf import uhf_symm
 from pyscf.scf import ghf
 from pyscf.scf import ghf_symm
@@ -193,7 +196,19 @@ def UHF(mol, *args):
     else:
         return uhf_symm.UHF(mol, *args)
 UHF.__doc__ = uhf.UHF.__doc__
-
+# !LAT #### 2024/12/18 (
+def UHF_DM(mol, *args):
+    if mol.nelectron == 1:
+        if not mol.symmetry or mol.groupname == 'C1':
+            return uhf_dm.HF1e(mol, *args)
+        else:
+            return uhf_symm_dm.HF1e(mol, *args)
+    elif not mol.symmetry or mol.groupname == 'C1':
+        return uhf_dm.UHF(mol, *args)
+    else:
+        return uhf_symm.UHF(mol, *args)
+UHF_DM.__doc__ = uhf_dm.UHF.__doc__
+# !LAT #### 2024/12/18 )
 def GHF(mol, *args):
     if mol.nelectron == 1:
         if not mol.symmetry or mol.groupname == 'C1':

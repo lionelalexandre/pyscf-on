@@ -139,9 +139,9 @@ Keyword argument "init_dm" is replaced by "dm0"''')
     #print('### trace check =',numpy.trace(numpy.matmul(numpy.matmul(s1e_invsqrt,s1e_invsqrt),s1e)),#LAT
     #          numpy.shape(s1e))              #LAT
     #LAT#####################################################################
-    #LAT Get number total of states and number of doubly occ. states
+    #LAT Get the size of the matrix and number of occ. states
     #LAT#####################################################################    
-    N, _ = numpy.shape(s1e) ; Ne = int(mol.tot_electrons()/2) #LAT
+    N, _ = numpy.shape(s1e) ; Ne = mol.nelec #LAT
     #LAT#####################################################################
     
     if dm0 is None:
@@ -201,17 +201,22 @@ Keyword argument "init_dm" is replaced by "dm0"''')
         last_hf_e = e_tot
 
         fock = mf.get_fock(h1e, s1e, vhf, dm, cycle, mf_diis, fock_last=fock_last)
-
+        #print('fock0',len(fock))
+        #print(fock[0])
+        #print('fock1')
+        #print(fock[1])
         if ( not dmp_scf ):
             mo_energy, mo_coeff = mf.eig(fock, s1e)
             mo_occ = mf.get_occ(mo_energy, mo_coeff)
             dm = mf.make_rdm1(mo_coeff, mo_occ)
+            #print('dm')
+            #print(dm)
         else:        
-            focktilde = numpy.matmul(numpy.matmul(s1e_invsqrt,fock),s1e_invsqrt)        
+            focktilde = dmp.get_focktilde(fock,s1e_invsqrt)
             X0 = dmp.hpcp_guess(focktilde,N,Ne)
             # have to pass thr argment for purification
             X, niter = dmp.hpcp_purify(X0,Ne,thr=1e-10,maxiter=50)
-            dm = numpy.matmul(numpy.matmul(s1e_invsqrt,X),s1e_invsqrt)*2
+            dm = dmp.get_dm(X,s1e_invsqrt)
             
             mo_energy = numpy.zeros((N))
             mo_coeff = numpy.zeros((N,N))
