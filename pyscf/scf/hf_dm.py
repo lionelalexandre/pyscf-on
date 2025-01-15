@@ -213,9 +213,7 @@ Keyword argument "init_dm" is replaced by "dm0"''')
             #print(dm)
         else:        
             focktilde = dmp.get_focktilde(fock,s1e_invsqrt)
-            X0 = dmp.hpcp_guess(focktilde,N,Ne)
-            # have to pass thr argment for purification
-            X, niter = dmp.hpcp_purify(X0,Ne,thr=1e-10,maxiter=50)
+            X, niter = dmp.dm_purify(H=focktilde,N=N,Ne=Ne,method='hpcp',thr=1e-8,maxiter=50)
             dm = dmp.get_dm(X,s1e_invsqrt)
             
             mo_energy = numpy.zeros((N))
@@ -2073,6 +2071,8 @@ This is the Gaussian fit version as described in doi:10.1063/5.0004046.''')
         print('### HERE!6')    
 
         logger.timer(self, 'SCF', *cput0)
+        print('### HERE!7')    
+        
         self._finalize()
         return self.e_tot
     kernel = lib.alias(scf, alias_name='kernel')
