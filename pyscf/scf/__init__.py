@@ -109,6 +109,9 @@ from pyscf.scf import hf_dm
 rhf_dm = hf_dm
 # !LAT #### 2024/11/14 )
 from pyscf.scf import rohf
+# !LAT #### 2024/12/19 (
+from pyscf.scf import rohf_dm
+# !LAT #### 2024/12/19 )
 from pyscf.scf import hf_symm
 rhf_symm = hf_symm
 # !LAT #### 2024/11/14 (
@@ -184,6 +187,20 @@ def ROHF(mol, *args):
     else:
         return hf_symm.ROHF(mol, *args)
 ROHF.__doc__ = rohf.ROHF.__doc__
+
+# !LAT #### 2024/12/19 (
+def ROHF_DM(mol, *args):
+    if mol.nelectron == 1:
+        if not mol.symmetry or mol.groupname == 'C1':
+            return rohf_dm.HF1e(mol)
+        else:
+            return hf_symm_dm.HF1e(mol, *args)
+    elif not mol.symmetry or mol.groupname == 'C1':
+        return rohf_dm.ROHF(mol, *args)
+    else:
+        return hf_symm_dm.ROHF(mol, *args)
+ROHF_DM.__doc__ = rohf_dm.ROHF.__doc__
+# !LAT #### 2024/12/19 )
 
 def UHF(mol, *args):
     if mol.nelectron == 1:
