@@ -110,7 +110,7 @@ rhf_dm = hf_dm
 # !LAT #### 2024/11/14 )
 from pyscf.scf import rohf
 # !LAT #### 2024/12/19 (
-from pyscf.scf import rohf_dm
+#from pyscf.scf import rohf_dm
 # !LAT #### 2024/12/19 )
 from pyscf.scf import hf_symm
 rhf_symm = hf_symm
