@@ -37,8 +37,6 @@ def hpcp_guess(H,N,Ne,*args):
     
     if (Ne[0] == Ne[1]):
         Ne = Ne[0]
-    else:
-        print('WARNING: Ne',Ne)
         
     I = np.eye(N, N)    
 
