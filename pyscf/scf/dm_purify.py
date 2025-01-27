@@ -201,6 +201,39 @@ def hpcp_purify(X0,Ne,thr=1e-8,maxiter=50):
         
         return np.array([X_a,X_b]), [iter_a,iter_b]
 
+def tc2_guess(H,N,Ne,*args):
+    
+    if (Ne[0] == Ne[1]):
+        Ne = Ne[0]
+    else:
+        print('WARNING: Ne',Ne)
+        
+    I = np.eye(N, N)    
+
+    #Restricted = 1 density matrix
+    if ( H.ndim == 2 ):    
+        
+        # 
+        epsi_0 = epsi_min(H,N) 
+        epsi_N = epsi_max(H,N) 
+    
+        X0 = (epsi_N*I - H) / (epsi_N - epsi_0)
+
+        return X0
+
+    # Unrestricted = 2 density matrices   
+    elif ( H.ndim == 3 ):    
+
+        epsi_0_a  = epsi_min(H[0],N) 
+        epsi_N_a  = epsi_max(H[0],N) 
+        epsi_0_b  = epsi_min(H[1],N) 
+        epsi_N_b  = epsi_max(H[1],N) 
+    
+        X0_a = (epsi_N_a*I - H) / (epsi_N_a - epsi_0_a)
+        X0_b = (epsi_N_b*I - H) / (epsi_N_b - epsi_0_b)
+
+        return np.array([X0_a, X0_b])
+
     
 def epsi_max(W,n):
     #
