@@ -26,8 +26,8 @@ def get_dm(Dtilde,Sinvsqrt):
 
 def dm_purify(H,N,Ne,method,thr,maxiter):
 
-    # Initialize X and niter
-    X = None
+    # Initialize X and niter ?
+    #X = 
     niter = 0
     
     if (method == 'hpcp') :
@@ -35,15 +35,11 @@ def dm_purify(H,N,Ne,method,thr,maxiter):
         X0 = hpcp_guess(H,N,Ne)    
         X, niter = hpcp_purify(X0,Ne,thr=1e-10,maxiter=50)
         
-    return X, niter
-
     if (method == 'tc2') :
 
         X0 = tc2_guess(H,N,Ne)
         X, niter = tc2_purify(X0,Ne,thr=1e-10,maxiter=50)
-    
-    return X, niter
-    
+
     if (method == 'trs4') :
 
         X0 = trs4_guess(H,N,Ne)
@@ -243,8 +239,9 @@ def tc2(X,Ne):
     #X = csr_matrix(X)
 
     X_2 = X @ X
-
-    if ( np.trace(X) >= Ne ):
+    
+    trace_X = np.trace(X)
+    if np.all(trace_X >= Ne):
         X = X_2
 
     else:
@@ -264,7 +261,7 @@ def tc2_purify(X0,Ne,thr=1e-8,maxiter=50):
         while ( test > threshold ) and ( iter_ < maxiter ):
            old_X = X
         
-           X, diag, p = tc2(X,Ne)
+           X = tc2(X,Ne)
         
            test = np.linalg.norm(X - old_X, ord='fro')
            #print(test,numpy.shape(X),type(X))
@@ -273,6 +270,48 @@ def tc2_purify(X0,Ne,thr=1e-8,maxiter=50):
         
         #print(linalg.eigh(X))
         return X, iter_
+    # Unrestricted = 2 density matrices
+    elif ( X0.ndim == 3 ):  
+        
+        threshold = thr
+        test_a = threshold*10
+        test_b = threshold*10
+        iter_a = 0
+        iter_b = 0
+        X_a = X0[0]
+        X_b = X0[1]
+    
+        while ( test_a > threshold ) and ( iter_a < maxiter ):
+           old_X_a = X_a
+        
+           X_a, diag_a, p_a = tc2(X_a,Ne[0])
+        
+           test_a = np.linalg.norm(X_a - old_X_a, ord='fro')
+           #occ, _ = linalg.eigh(X_a)
+           #print('X_a',test_a,numpy.trace(X_a),p_a[0],p_a[1],p_a[2])
+           #print(occ)
+           #print(test_a,numpy.shape(X_a),type(X_a),numpy.trace(X_a))
+           #print(test_b,numpy.shape(X_b),type(X_b),numpy.trace(X_b))
+           iter_a += 1
+
+        while ( test_b > threshold ) and ( iter_b < maxiter ):
+           old_X_b = X_b
+        
+           X_b, diag_b, p_b = tc2(X_b,Ne[1])
+        
+           test_b = np.linalg.norm(X_b - old_X_b, ord='fro')
+           #occ, _ = linalg.eigh(X_b)
+           #print(test_a,numpy.shape(X_a),type(X_a),numpy.trace(X_a))
+           #print('X_b',test_b,numpy.trace(X_b))
+           #print(occ)
+           
+           iter_b += 1
+        #print('X_b',numpy.trace(X_b))
+        #print('X_a',numpy.trace(X_a))
+        #print(linalg.eigh(X_a))
+        #print(linalg.eigh(X_b))
+        
+        return np.array([X_a,X_b]), [iter_a,iter_b]
 
 def trs4_guess(H,N,Ne,*args):
     
