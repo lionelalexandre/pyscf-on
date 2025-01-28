@@ -107,8 +107,7 @@ def hpcp_guess(H,N,Ne,*args):
         return np.array([X0_a, X0_b])
        
 def hpcp(X,Ne):  
-    
-    
+        
     c = np.float64(0.0)
     c1= np.float64(0.0)
     c2= np.float64(0.0)    
@@ -246,7 +245,6 @@ def tc2(X,Ne):
 
     else:
         X = 2*X - X_2
-  
     return X
 
 def tc2_purify(X0,Ne,thr=1e-8,maxiter=50):
@@ -284,7 +282,7 @@ def tc2_purify(X0,Ne,thr=1e-8,maxiter=50):
         while ( test_a > threshold ) and ( iter_a < maxiter ):
            old_X_a = X_a
         
-           X_a, diag_a, p_a = tc2(X_a,Ne[0])
+           X_a = tc2(X_a,Ne[0])
         
            test_a = np.linalg.norm(X_a - old_X_a, ord='fro')
            #occ, _ = linalg.eigh(X_a)
@@ -297,7 +295,7 @@ def tc2_purify(X0,Ne,thr=1e-8,maxiter=50):
         while ( test_b > threshold ) and ( iter_b < maxiter ):
            old_X_b = X_b
         
-           X_b, diag_b, p_b = tc2(X_b,Ne[1])
+           X_b = tc2(X_b,Ne[1])
         
            test_b = np.linalg.norm(X_b - old_X_b, ord='fro')
            #occ, _ = linalg.eigh(X_b)
@@ -345,6 +343,95 @@ def trs4_guess(H,N,Ne,*args):
         X0_b = (epsi_N_b*I - H) / (epsi_N_b - epsi_0_b)
 
         return np.array([X0_a, X0_b])
+
+def trs4(X,Ne):  
+    
+    #X = csr_matrix(X)
+
+    X_2 = X @ X
+    I = np.eye(X.shape[0]) 
+    F = X_2 @ (4*X - 3*X_2) 
+    G = X_2 @ ((I - X) @ (I - X))
+    trace_F = np.trace(F)
+    trace_G = np.trace(G)
+    gamma_n = (Ne[0] - trace_F) / trace_G
+    gamma_min = 0
+    gamma_max = 6
+
+    if np.all(gamma_n<gamma_min):
+        X = X_2
+
+    elif np.all(gamma_n>gamma_max):
+        X = 2*X - X_2
+    
+    else:
+        X = F + gamma_n * G
+  
+    return X
+
+def trs4_purify(X0,Ne,thr=1e-8,maxiter=50):
+
+    #Restricted = 1 density matrix
+    if ( X0.ndim == 2 ): 
+        threshold = thr
+        test = threshold*10
+        iter_ = 0
+        X = X0
+    
+        while ( test > threshold ) and ( iter_ < maxiter ):
+           old_X = X
+        
+           X = trs4(X,Ne)
+        
+           test = np.linalg.norm(X - old_X, ord='fro')
+           #print(test,numpy.shape(X),type(X))
+           #    print(test,numpy.trace(X))
+           iter_ += 1
+        
+        #print(linalg.eigh(X))
+        return X, iter_
+    # Unrestricted = 2 density matrices
+    elif ( X0.ndim == 3 ):  
+        
+        threshold = thr
+        test_a = threshold*10
+        test_b = threshold*10
+        iter_a = 0
+        iter_b = 0
+        X_a = X0[0]
+        X_b = X0[1]
+    
+        while ( test_a > threshold ) and ( iter_a < maxiter ):
+           old_X_a = X_a
+        
+           X_a = trs4(X_a,Ne[0])
+        
+           test_a = np.linalg.norm(X_a - old_X_a, ord='fro')
+           #occ, _ = linalg.eigh(X_a)
+           #print('X_a',test_a,numpy.trace(X_a),p_a[0],p_a[1],p_a[2])
+           #print(occ)
+           #print(test_a,numpy.shape(X_a),type(X_a),numpy.trace(X_a))
+           #print(test_b,numpy.shape(X_b),type(X_b),numpy.trace(X_b))
+           iter_a += 1
+
+        while ( test_b > threshold ) and ( iter_b < maxiter ):
+           old_X_b = X_b
+        
+           X_b = trs4(X_b,Ne[1])
+        
+           test_b = np.linalg.norm(X_b - old_X_b, ord='fro')
+           #occ, _ = linalg.eigh(X_b)
+           #print(test_a,numpy.shape(X_a),type(X_a),numpy.trace(X_a))
+           #print('X_b',test_b,numpy.trace(X_b))
+           #print(occ)
+           
+           iter_b += 1
+        #print('X_b',numpy.trace(X_b))
+        #print('X_a',numpy.trace(X_a))
+        #print(linalg.eigh(X_a))
+        #print(linalg.eigh(X_b))
+        
+        return np.array([X_a,X_b]), [iter_a,iter_b]
 
     
 def epsi_max(W,n):
