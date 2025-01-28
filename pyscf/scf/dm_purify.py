@@ -25,10 +25,6 @@ def get_dm(Dtilde,Sinvsqrt):
 
 
 def dm_purify(H,N,Ne,method,thr,maxiter):
-
-    # Initialize X and niter ?
-    #X = 
-    niter = 0
     
     if (method == 'hpcp') :
     
