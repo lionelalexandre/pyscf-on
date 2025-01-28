@@ -234,6 +234,41 @@ def tc2_guess(H,N,Ne,*args):
 
         return np.array([X0_a, X0_b])
 
+def tc2(X,Ne):  
+    
+    #X = csr_matrix(X)
+
+    X_2 = X @ X
+
+    if ( np.trace(X) >= Ne ):
+        X = X_2
+
+    else:
+        X = 2*X - X_2
+  
+    return X
+
+def tc2_purify(X0,Ne,thr=1e-8,maxiter=50):
+
+    #Restricted = 1 density matrix
+    if ( X0.ndim == 2 ): 
+        threshold = thr
+        test = threshold*10
+        iter_ = 0
+        X = X0
+    
+        while ( test > threshold ) and ( iter_ < maxiter ):
+           old_X = X
+        
+           X, diag, p = tc2(X,Ne)
+        
+           test = np.linalg.norm(X - old_X, ord='fro')
+           #print(test,numpy.shape(X),type(X))
+           #    print(test,numpy.trace(X))
+           iter_ += 1
+        
+        #print(linalg.eigh(X))
+        return X, iter_
 
 def trs4_guess(H,N,Ne,*args):
     
