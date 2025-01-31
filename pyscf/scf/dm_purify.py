@@ -346,8 +346,9 @@ def trs4(X,Ne):
 
     X_2 = X @ X
     I = np.eye(X.shape[0]) 
+    I_X = I - X
     F = X_2 @ (4*X - 3*X_2) 
-    G = X_2 @ ((I - X) @ (I - X))
+    G = X_2 @ ((I_X) @ (I_X))
     trace_F = np.trace(F)
     trace_G = np.trace(G)
     gamma_n = (Ne[0] - trace_F) / trace_G
