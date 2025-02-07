@@ -286,7 +286,9 @@ Keyword argument "init_dm" is replaced by "dm0"''')
                     e_tot, e_tot-last_hf_e, norm_gorb, norm_ddm)
         if dump_chk and mf.chkfile:
             mf.dump_chk(locals())
-
+            
+    t5 = time.process_time() 
+    print('### timing SCF =',t5 - t0)
     logger.timer(mf, 'scf_cycle', *cput0)
     # A post-processing hook before return
     mf.post_kernel(locals())
