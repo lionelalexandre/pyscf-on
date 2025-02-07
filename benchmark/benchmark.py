@@ -6,8 +6,20 @@ import numpy
 import importlib.util
 print(importlib.util.find_spec('pyscf'))
 
+# Directory containing molecule xyz files
+molecules_dir = 'xyz'
+
 # List of molecule xyz files
-molecules = ['benzene.xyz', 'naphtalene.xyz', 'anthracene.xyz', 'tetracene.xyz', 'pentacene.xyz', 'hexacene.xyz', 'heptacene.xyz', 'octacene.xyz', 'nonacene.xyz']#,decacene.xyz]
+molecules_list = 'benchmark.list'
+
+# Open molecule_list and append molecule files
+molecules = [ ]
+f = open(molecules_list,'r')
+for line in f :
+    molecules.append(molecules_dir+'/'+line.strip())
+
+# List of molecule xyz files
+#molecules = ['benzene.xyz', 'naphtalene.xyz', 'anthracene.xyz', 'tetracene.xyz', 'pentacene.xyz', 'hexacene.xyz', 'heptacene.xyz', 'octacene.xyz', 'nonacene.xyz']#,decacene.xyz]
 
 # Basis set and convergence settings
 basis_set = '6-31G'
