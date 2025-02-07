@@ -22,6 +22,9 @@ Hartree-Fock
 
 import sys
 import tempfile
+from timeit import default_timer as timer
+from datetime import timedelta
+import time
 
 from functools import reduce
 import numpy
@@ -168,14 +171,20 @@ Keyword argument "init_dm" is replaced by "dm0"''')
     fock_last = None
     cput1 = logger.timer(mf, 'initialize scf', *cput0)
     mf.cycles = 0
+    t_d = 0
     for cycle in range(mf.max_cycle):
         dm_last = dm
         last_hf_e = e_tot
 
         fock = mf.get_fock(h1e, s1e, vhf, dm, cycle, mf_diis, fock_last=fock_last)
+        
+        t_ini = time.process_time()
         mo_energy, mo_coeff = mf.eig(fock, s1e)
         mo_occ = mf.get_occ(mo_energy, mo_coeff)
         dm = mf.make_rdm1(mo_coeff, mo_occ)
+        t_fin = time.process_time()
+        t_d = t_d + t_fin - t_ini
+
         vhf = mf.get_veff(mol, dm, dm_last, vhf)
         e_tot = mf.energy_tot(dm, h1e, vhf)
 
@@ -206,6 +215,7 @@ Keyword argument "init_dm" is replaced by "dm0"''')
 
         if scf_conv:
             break
+    print('diagonalization time', t_d)
 
     mf.cycles = cycle + 1
     if scf_conv and conv_check:
@@ -238,7 +248,6 @@ Keyword argument "init_dm" is replaced by "dm0"''')
     # A post-processing hook before return
     mf.post_kernel(locals())
     return scf_conv, e_tot, mo_energy, mo_coeff, mo_occ
-
 
 def energy_elec(mf, dm=None, h1e=None, vhf=None):
     r'''Electronic part of Hartree-Fock energy, for given core hamiltonian and
