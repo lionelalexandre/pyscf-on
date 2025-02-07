@@ -196,6 +196,8 @@ Keyword argument "init_dm" is replaced by "dm0"''')
     fock_last = None
     cput1 = logger.timer(mf, 'initialize scf', *cput0)
     mf.cycles = 0
+    t_d = 0
+    t_p = 0
     for cycle in range(mf.max_cycle):
         dm_last = dm
         last_hf_e = e_tot
@@ -205,21 +207,26 @@ Keyword argument "init_dm" is replaced by "dm0"''')
         #print(fock[0])
         #print('fock1')
         #print(fock[1])
+        
         if ( not dmp_scf ):
+            t_ini = time.process_time()
             mo_energy, mo_coeff = mf.eig(fock, s1e)
             mo_occ = mf.get_occ(mo_energy, mo_coeff)
             dm = mf.make_rdm1(mo_coeff, mo_occ)
+            t_fin = time.process_time()
+            t_d = t_d + t_fin - t_ini
             #print('dm')
             #print(dm)
-        else:        
-            focktilde = dmp.get_focktilde(fock,s1e_invsqrt)
-            X, niter = dmp.dm_purify(H=focktilde,N=N,Ne=Ne,method='hpcp',thr=1e-8,maxiter=50)
-            dm = dmp.get_dm(X,s1e_invsqrt)
-            
+        else: 
+            t_ini = time.process_time()
+            focktilde = dmp.get_focktilde(fock, s1e_invsqrt)
+            X, niter = dmp.dm_purify(H=focktilde, N=N, Ne=Ne, method='trs4', thr=1e-8, maxiter=50)
+            dm = dmp.get_dm(X, s1e_invsqrt)
             mo_energy = numpy.zeros((N))
             mo_coeff = numpy.zeros((N,N))
             mo_occ = numpy.zeros((N))
-
+            t_fin =time.process_time()
+            t_p = t_p + t_fin - t_ini
         vhf = mf.get_veff(mol, dm, dm_last, vhf)
         e_tot = mf.energy_tot(dm, h1e, vhf)
 
@@ -258,7 +265,10 @@ Keyword argument "init_dm" is replaced by "dm0"''')
 
         if scf_conv:
             break
-        
+    #print('diagonalization time', t_d)
+    print('purification time', t_p)
+    print('number of purification iterations =', niter)
+    
     mf.cycles = cycle + 1
     if scf_conv and conv_check:
         logger.info(mf, 'WARNING: dmp_scf => conv_check implies a diagonalisation step')
@@ -286,12 +296,11 @@ Keyword argument "init_dm" is replaced by "dm0"''')
                     e_tot, e_tot-last_hf_e, norm_gorb, norm_ddm)
         if dump_chk and mf.chkfile:
             mf.dump_chk(locals())
-
+    
     logger.timer(mf, 'scf_cycle', *cput0)
     # A post-processing hook before return
     mf.post_kernel(locals())
     return scf_conv, e_tot, mo_energy, mo_coeff, mo_occ
-
 
 def energy_elec(mf, dm=None, h1e=None, vhf=None):
     r'''Electronic part of Hartree-Fock energy, for given core hamiltonian and
