@@ -25,12 +25,12 @@ def get_dm(Dtilde,Sinvsqrt):
 
 
 def dm_purify(H,N,Ne,method,thr,maxiter):
-    
+
     if (method == 'hpcp') :
-    
+
         X0 = hpcp_guess(H,N,Ne)
         X, niter = hpcp_purify(X0,Ne,thr=1e-10,maxiter=50)
-        
+
     if (method == 'tc2') :
 
         X0 = tc2_guess(H,N,Ne)
@@ -71,7 +71,7 @@ def hpcp_guess(H,N,Ne,*args):
         X0 = beta1*I + beta2*(mu*I - H) 
 
         return X0
-    
+
     # Unrestricted = 2 density matrices
     elif ( H.ndim == 3 ):
 
@@ -95,12 +95,12 @@ def hpcp_guess(H,N,Ne,*args):
         beta2_a = min(lambd1_a, lambd2_a)
         beta1_b = theta_b
         beta2_b = min(lambd1_b, lambd2_b)
-    
+
         X0_a = beta1_a*I + beta2_a*(mu_a*I - H[0])
         X0_b = beta1_b*I + beta2_b*(mu_b*I - H[1])
 
         return np.array([X0_a, X0_b])
-       
+
 def hpcp(X,Ne):
     c = np.float64(0.0)
     c1= np.float64(0.0)
@@ -110,7 +110,7 @@ def hpcp(X,Ne):
 
     X_2 = X @ X
     X_3 = X_2 @ X
-    
+
     c1 = np.float64( np.trace(X_2 - X_3) )
     c2 = np.float64( np.trace(X   - X_2) )   
 
@@ -122,7 +122,7 @@ def hpcp(X,Ne):
 
     else:
         c = c1/c2
-  
+
     X = X + 2 * ( X_2 - X_3 - c * (X - X_2) )
 
     p = [c1,c2,c,0.0,0.0,0.0,0.0]
@@ -137,22 +137,22 @@ def hpcp_purify(X0,Ne,thr=1e-8,maxiter=50):
         test = threshold*10
         iter_ = 0
         X = X0
-    
-        while ( test > threshold ) and ( iter_ < maxiter ):
-           old_X = X
-           X, diag, p = hpcp(X,Ne)
 
-           test = np.linalg.norm(X - old_X, ord='fro')
-           #print(test,numpy.shape(X),type(X))
-           #    print(test,numpy.trace(X))
-           iter_ += 1
+        while ( test > threshold ) and ( iter_ < maxiter ):
+            old_X = X
+            X, diag, p = hpcp(X,Ne)
+
+            test = np.linalg.norm(X - old_X, ord='fro')
+            #print(test,numpy.shape(X),type(X))
+            #    print(test,numpy.trace(X))
+            iter_ += 1
 
         #print(linalg.eigh(X))
         return X, iter_
 
     # Unrestricted = 2 density matrices
     elif ( X0.ndim == 3 ):  
- 
+
         threshold = thr
         test_a = threshold*10
         test_b = threshold*10
@@ -162,23 +162,23 @@ def hpcp_purify(X0,Ne,thr=1e-8,maxiter=50):
         X_b = X0[1]
 
         while ( test_a > threshold ) and ( iter_a < maxiter ):
-           old_X_a = X_a
+            old_X_a = X_a
 
-           X_a, diag_a, p_a = hpcp(X_a,Ne[0])
+            X_a, diag_a, p_a = hpcp(X_a,Ne[0])
 
-           test_a = np.linalg.norm(X_a - old_X_a, ord='fro')
-           # occ, _ = linalg.eigh(X_a)
-           # print('X_a',test_a,numpy.trace(X_a),p_a[0],p_a[1],p_a[2])
-           # print(occ)
-           # print(test_a,numpy.shape(X_a),type(X_a),numpy.trace(X_a))
-           # print(test_b,numpy.shape(X_b),type(X_b),numpy.trace(X_b))
-           iter_a += 1
+            test_a = np.linalg.norm(X_a - old_X_a, ord='fro')
+            # occ, _ = linalg.eigh(X_a)
+            # print('X_a',test_a,numpy.trace(X_a),p_a[0],p_a[1],p_a[2])
+            # print(occ)
+            # print(test_a,numpy.shape(X_a),type(X_a),numpy.trace(X_a))
+            # print(test_b,numpy.shape(X_b),type(X_b),numpy.trace(X_b))
+            iter_a += 1
 
         while ( test_b > threshold ) and ( iter_b < maxiter ):
             old_X_b = X_b
-        
+
             X_b, diag_b, p_b = hpcp(X_b,Ne[1])
-        
+
             test_b = np.linalg.norm(X_b - old_X_b, ord='fro')
             #occ, _ = linalg.eigh(X_b)
             #print(test_a,numpy.shape(X_a),type(X_a),numpy.trace(X_a))
@@ -190,7 +190,7 @@ def hpcp_purify(X0,Ne,thr=1e-8,maxiter=50):
         #print('X_a',numpy.trace(X_a))
         #print(linalg.eigh(X_a))
         #print(linalg.eigh(X_b))
-        
+
         return np.array([X_a,X_b]), [iter_a,iter_b]
 
 def tc2_guess(H,N,Ne,*args):
@@ -199,7 +199,7 @@ def tc2_guess(H,N,Ne,*args):
         Ne = Ne[0]
     else:
         print('WARNING: Ne',Ne)
-  
+
     I = np.eye(N, N)   
 
     #Restricted = 1 density matrix
@@ -226,7 +226,7 @@ def tc2_guess(H,N,Ne,*args):
         return np.array([X0_a, X0_b])
 
 def tc2(X,Ne):
-    
+
     #X = csr_matrix(X)
 
     X_2 = X @ X
