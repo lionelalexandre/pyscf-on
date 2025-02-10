@@ -123,32 +123,33 @@ Keyword argument "init_dm" is replaced by "dm0"''')
 
     t0 = time.process_time() #LAT
     mol = mf.mol
-    t1 = time.process_time() 
+    t1 = time.process_time()
     print('### timing get mol =',t1 - t0) #LAT
     s1e = mf.get_ovlp(mol)
-    t2 = time.process_time()     
+    t2 = time.process_time()
     print('### timing get ovl =',t2 - t1) #LAT
-    
+
     #LAT#####################################################################
     #LAT Compute S^-1/2 and S^+1/2 and print check for debug purpose
     #LAT#####################################################################
     s1e_invsqrt = dmp.invsqrt_ovlp_diag(s1e) #LAT
     s1e_sqrt = numpy.matmul(s1e_invsqrt,s1e) #LAT
-    t3 = time.process_time()   
+    t3 = time.process_time()
     print('### timing get ovl inv =',t3 - t2) #LAT
     #print('### trace check =',numpy.trace(numpy.matmul(numpy.matmul(s1e_invsqrt,s1e_invsqrt),s1e)),#LAT
     #          numpy.shape(s1e))              #LAT
     #LAT#####################################################################
     #LAT Get the size of the matrix and number of occ. states
-    #LAT#####################################################################    
-    N, _ = numpy.shape(s1e) ; Ne = mol.nelec #LAT
     #LAT#####################################################################
-    
+    N, _ = numpy.shape(s1e)
+    Ne = mol.nelec #LAT
+    #LAT#####################################################################
+
     if dm0 is None:
         dm = mf.get_init_guess(mol, mf.init_guess, s1e=s1e, **kwargs)
     else:
         dm = dm0
-    
+
     h1e = mf.get_hcore(mol)
     vhf = mf.get_veff(mol, dm)
     e_tot = mf.energy_tot(dm, h1e, vhf)
@@ -156,17 +157,17 @@ Keyword argument "init_dm" is replaced by "dm0"''')
 
     scf_conv = False
     mo_energy = mo_coeff = mo_occ = None
-    
-    t4 = time.process_time() 
+
+    t4 = time.process_time()
     print('### timing get h =',t4 - t3) #LAT
     print('### dmp_scf=',dmp_scf) #LAT
-    # Skip SCF iterations. Compute only the total energy of the initial density    
+    # Skip SCF iterations. Compute only the total energy of the initial density
     if mf.max_cycle <= 0 :
         if ( not dmp_scf ):
             fock = mf.get_fock(h1e, s1e, vhf, dm)  # = h1e + vhf, no DIIS
             mo_energy, mo_coeff = mf.eig(fock, s1e)
-            mo_occ = mf.get_occ(mo_energy, mo_coeff)      
-        return scf_conv, e_tot, mo_energy, mo_coeff, mo_occ  
+            mo_occ = mf.get_occ(mo_energy, mo_coeff)
+        return scf_conv, e_tot, mo_energy, mo_coeff, mo_occ
 
     if isinstance(mf.diis, lib.diis.DIIS):
         mf_diis = mf.diis
@@ -207,7 +208,7 @@ Keyword argument "init_dm" is replaced by "dm0"''')
         #print(fock[0])
         #print('fock1')
         #print(fock[1])
-        
+
         if ( not dmp_scf ):
             t_ini = time.process_time()
             mo_energy, mo_coeff = mf.eig(fock, s1e)
@@ -217,7 +218,7 @@ Keyword argument "init_dm" is replaced by "dm0"''')
             t_d = t_d + t_fin - t_ini
             #print('dm')
             #print(dm)
-        else: 
+        else:
             t_ini = time.process_time()
             focktilde = dmp.get_focktilde(fock, s1e_invsqrt)
             X, niter = dmp.dm_purify(H=focktilde, N=N, Ne=Ne, method='trs4', thr=1e-8, maxiter=50)
@@ -236,17 +237,17 @@ Keyword argument "init_dm" is replaced by "dm0"''')
         fock_last = fock
         fock = mf.get_fock(h1e, s1e, vhf, dm)  # = h1e + vhf, no DIIS
 
-        norm_ddm = numpy.linalg.norm(dm-dm_last)        
+        norm_ddm = numpy.linalg.norm(dm-dm_last)
         if ( not dmp_scf ):
             norm_gorb = numpy.linalg.norm(mf.get_grad(mo_coeff, mo_occ, fock))
         else:
             logger.info(mf, 'WARNING: dmp_scf => |ddm| is the convergence parameter')
             # this is not a good way of doing it but avoid many changes
             norm_gorb = norm_ddm
-                
+
         if not TIGHT_GRAD_CONV_TOL:
             norm_gorb = norm_gorb / numpy.sqrt(norm_gorb.size)
-        
+
         logger.info(mf, 'cycle= %d E= %.15g  delta_E= %4.3g  |g|= %4.3g  |ddm|= %4.3g',
                     cycle+1, e_tot, e_tot-last_hf_e, norm_gorb, norm_ddm)
 
@@ -268,7 +269,7 @@ Keyword argument "init_dm" is replaced by "dm0"''')
     #print('diagonalization time', t_d)
     print('purification time', t_p)
     print('number of purification iterations =', niter)
-    
+
     mf.cycles = cycle + 1
     if scf_conv and conv_check:
         logger.info(mf, 'WARNING: dmp_scf => conv_check implies a diagonalisation step')
@@ -296,7 +297,7 @@ Keyword argument "init_dm" is replaced by "dm0"''')
                     e_tot, e_tot-last_hf_e, norm_gorb, norm_ddm)
         if dump_chk and mf.chkfile:
             mf.dump_chk(locals())
-    
+
     logger.timer(mf, 'scf_cycle', *cput0)
     # A post-processing hook before return
     mf.post_kernel(locals())
@@ -2053,35 +2054,35 @@ This is the Gaussian fit version as described in doi:10.1063/5.0004046.''')
         '''
         cput0 = (logger.process_clock(), logger.perf_counter())
 
-        print('### HERE!0')    
+        print('### HERE!0')
 
         self.dump_flags()
 
-        print('### HERE!1')    
+        print('### HERE!1')
         self.build(self.mol)
-        print('### HERE!2')    
+        print('### HERE!2')
         if self.max_cycle > 0 or self.mo_coeff is None:
-            print('### HERE!3')  
+            print('### HERE!3')
             self.converged, self.e_tot, \
                     self.mo_energy, self.mo_coeff, self.mo_occ = \
                     kernel(self, self.conv_tol, self.conv_tol_grad,
                            dm0=dm0, callback=self.callback,
                            conv_check=self.conv_check, dm_scf=self.dmp_scf, **kwargs)
-            print('### HERE!4')  
+            print('### HERE!4')
         else:
             # Avoid to update SCF orbitals in the non-SCF initialization
             # (issue #495).  But run regular SCF for initial guess if SCF was
             # not initialized.
-            print('### HERE!5')  
+            print('### HERE!5')
 
             self.e_tot = kernel(self, self.conv_tol, self.conv_tol_grad,
                                 dm0=dm0, callback=self.callback,
                                 conv_check=self.conv_check, dm_scf=self.dmp_scf, **kwargs)[1]
-        print('### HERE!6')    
+        print('### HERE!6')
 
         logger.timer(self, 'SCF', *cput0)
-        print('### HERE!7')    
-        
+        print('### HERE!7')
+
         self._finalize()
         return self.e_tot
     kernel = lib.alias(scf, alias_name='kernel')
