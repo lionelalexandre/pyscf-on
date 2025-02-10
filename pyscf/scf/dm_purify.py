@@ -249,19 +249,19 @@ def tc2_purify(X0,Ne,thr=1e-8,maxiter=50):
 
         while ( test > threshold ) and ( iter_ < maxiter ):
             old_X = X
-        
+
             X = tc2(X,Ne)
 
             test = np.linalg.norm(X - old_X, ord='fro')
             #print(test,numpy.shape(X),type(X))
             #print(test,numpy.trace(X))
             iter_ += 1
-        
+
         #print(linalg.eigh(X))
         return X, iter_
     # Unrestricted = 2 density matrices
-    elif ( X0.ndim == 3 ):  
-        
+    elif ( X0.ndim == 3 ):
+
         threshold = thr
         test_a = threshold*10
         test_b = threshold*10
@@ -269,80 +269,79 @@ def tc2_purify(X0,Ne,thr=1e-8,maxiter=50):
         iter_b = 0
         X_a = X0[0]
         X_b = X0[1]
-    
+
         while ( test_a > threshold ) and ( iter_a < maxiter ):
-           old_X_a = X_a
-        
-           X_a = tc2(X_a,Ne[0])
-        
-           test_a = np.linalg.norm(X_a - old_X_a, ord='fro')
-           #occ, _ = linalg.eigh(X_a)
-           #print('X_a',test_a,numpy.trace(X_a),p_a[0],p_a[1],p_a[2])
-           #print(occ)
-           #print(test_a,numpy.shape(X_a),type(X_a),numpy.trace(X_a))
-           #print(test_b,numpy.shape(X_b),type(X_b),numpy.trace(X_b))
-           iter_a += 1
+            old_X_a = X_a
+
+            X_a = tc2(X_a,Ne[0])
+
+            test_a = np.linalg.norm(X_a - old_X_a, ord='fro')
+            #occ, _ = linalg.eigh(X_a)
+            #print('X_a',test_a,numpy.trace(X_a),p_a[0],p_a[1],p_a[2])
+            #print(occ)
+            #print(test_a,numpy.shape(X_a),type(X_a),numpy.trace(X_a))
+            #print(test_b,numpy.shape(X_b),type(X_b),numpy.trace(X_b))
+            iter_a += 1
 
         while ( test_b > threshold ) and ( iter_b < maxiter ):
-           old_X_b = X_b
-        
-           X_b = tc2(X_b,Ne[1])
-        
-           test_b = np.linalg.norm(X_b - old_X_b, ord='fro')
-           #occ, _ = linalg.eigh(X_b)
-           #print(test_a,numpy.shape(X_a),type(X_a),numpy.trace(X_a))
-           #print('X_b',test_b,numpy.trace(X_b))
-           #print(occ)
-           
-           iter_b += 1
+            old_X_b = X_b
+
+            X_b = tc2(X_b,Ne[1])
+
+            test_b = np.linalg.norm(X_b - old_X_b, ord='fro')
+            #occ, _ = linalg.eigh(X_b)
+            #print(test_a,numpy.shape(X_a),type(X_a),numpy.trace(X_a))
+            #print('X_b',test_b,numpy.trace(X_b))
+            #print(occ)
+
+            iter_b += 1
         #print('X_b',numpy.trace(X_b))
         #print('X_a',numpy.trace(X_a))
         #print(linalg.eigh(X_a))
         #print(linalg.eigh(X_b))
-        
+
         return np.array([X_a,X_b]), [iter_a,iter_b]
 
 def trs4_guess(H,N,Ne,*args):
-    
+
     if (Ne[0] == Ne[1]):
         Ne = Ne[0]
     else:
         print('WARNING: Ne',Ne)
-        
-    I = np.eye(N, N)    
+  
+    I = np.eye(N, N)
 
     #Restricted = 1 density matrix
-    if ( H.ndim == 2 ):    
-        
-        # 
-        epsi_0 = epsi_min(H,N) 
-        epsi_N = epsi_max(H,N) 
-    
+    if ( H.ndim == 2 ):
+
+        epsi_0 = epsi_min(H,N)
+        epsi_N = epsi_max(H,N)
+
         X0 = (epsi_N*I - H) / (epsi_N - epsi_0)
 
         return X0
 
-    # Unrestricted = 2 density matrices   
-    elif ( H.ndim == 3 ):    
+    # Unrestricted = 2 density matrices
+    elif ( H.ndim == 3 ):
 
-        epsi_0_a  = epsi_min(H[0],N) 
-        epsi_N_a  = epsi_max(H[0],N) 
-        epsi_0_b  = epsi_min(H[1],N) 
-        epsi_N_b  = epsi_max(H[1],N) 
-    
+        epsi_0_a  = epsi_min(H[0],N)
+        epsi_N_a  = epsi_max(H[0],N)
+        epsi_0_b  = epsi_min(H[1],N)
+        epsi_N_b  = epsi_max(H[1],N)
+
         X0_a = (epsi_N_a*I - H) / (epsi_N_a - epsi_0_a)
         X0_b = (epsi_N_b*I - H) / (epsi_N_b - epsi_0_b)
 
         return np.array([X0_a, X0_b])
 
-def trs4(X,Ne):  
-    
+def trs4(X,Ne):
+
     #X = csr_matrix(X)
 
     X_2 = X @ X
-    I = np.eye(X.shape[0]) 
+    I = np.eye(X.shape[0])
     I_X = I - X
-    F = X_2 @ (4*X - 3*X_2) 
+    F = X_2 @ (4*X - 3*X_2)
     G = X_2 @ ((I_X) @ (I_X))
     trace_F = np.trace(F)
     trace_G = np.trace(G)
@@ -355,36 +354,36 @@ def trs4(X,Ne):
 
     elif np.all(gamma_n>gamma_max):
         X = 2*X - X_2
-    
+
     else:
         X = F + gamma_n * G
-  
+
     return X
 
 def trs4_purify(X0,Ne,thr=1e-8,maxiter=50):
 
     #Restricted = 1 density matrix
-    if ( X0.ndim == 2 ): 
+    if ( X0.ndim == 2 ):
         threshold = thr
         test = threshold*10
         iter_ = 0
         X = X0
-    
+
         while ( test > threshold ) and ( iter_ < maxiter ):
-           old_X = X
-        
-           X = trs4(X,Ne)
-        
-           test = np.linalg.norm(X - old_X, ord='fro')
-           #print(test,numpy.shape(X),type(X))
-           #    print(test,numpy.trace(X))
-           iter_ += 1
-        
+            old_X = X
+
+            X = trs4(X,Ne)
+
+            test = np.linalg.norm(X - old_X, ord='fro')
+            #print(test,numpy.shape(X),type(X))
+            #    print(test,numpy.trace(X))
+            iter_ += 1
+
         #print(linalg.eigh(X))
         return X, iter_
     # Unrestricted = 2 density matrices
-    elif ( X0.ndim == 3 ):  
-        
+    elif ( X0.ndim == 3 ):
+
         threshold = thr
         test_a = threshold*10
         test_b = threshold*10
@@ -392,40 +391,39 @@ def trs4_purify(X0,Ne,thr=1e-8,maxiter=50):
         iter_b = 0
         X_a = X0[0]
         X_b = X0[1]
-    
+
         while ( test_a > threshold ) and ( iter_a < maxiter ):
-           old_X_a = X_a
-        
-           X_a = trs4(X_a,Ne[0])
-        
-           test_a = np.linalg.norm(X_a - old_X_a, ord='fro')
-           #occ, _ = linalg.eigh(X_a)
-           #print('X_a',test_a,numpy.trace(X_a),p_a[0],p_a[1],p_a[2])
-           #print(occ)
-           #print(test_a,numpy.shape(X_a),type(X_a),numpy.trace(X_a))
-           #print(test_b,numpy.shape(X_b),type(X_b),numpy.trace(X_b))
-           iter_a += 1
+            old_X_a = X_a
+
+            X_a = trs4(X_a,Ne[0])
+
+            test_a = np.linalg.norm(X_a - old_X_a, ord='fro')
+            #occ, _ = linalg.eigh(X_a)
+            #print('X_a',test_a,numpy.trace(X_a),p_a[0],p_a[1],p_a[2])
+            #print(occ)
+            #print(test_a,numpy.shape(X_a),type(X_a),numpy.trace(X_a))
+            #print(test_b,numpy.shape(X_b),type(X_b),numpy.trace(X_b))
+            iter_a += 1
 
         while ( test_b > threshold ) and ( iter_b < maxiter ):
-           old_X_b = X_b
-        
-           X_b = trs4(X_b,Ne[1])
-        
-           test_b = np.linalg.norm(X_b - old_X_b, ord='fro')
-           #occ, _ = linalg.eigh(X_b)
-           #print(test_a,numpy.shape(X_a),type(X_a),numpy.trace(X_a))
-           #print('X_b',test_b,numpy.trace(X_b))
-           #print(occ)
-           
-           iter_b += 1
+            old_X_b = X_b
+
+            X_b = trs4(X_b,Ne[1])
+
+            test_b = np.linalg.norm(X_b - old_X_b, ord='fro')
+            #occ, _ = linalg.eigh(X_b)
+            #print(test_a,numpy.shape(X_a),type(X_a),numpy.trace(X_a))
+            #print('X_b',test_b,numpy.trace(X_b))
+            #print(occ)
+
+            iter_b += 1
         #print('X_b',numpy.trace(X_b))
         #print('X_a',numpy.trace(X_a))
         #print(linalg.eigh(X_a))
         #print(linalg.eigh(X_b))
-        
+
         return np.array([X_a,X_b]), [iter_a,iter_b]
 
-    
 def epsi_max(W,n):
     #
     v = np.zeros(n) 
@@ -440,15 +438,15 @@ def epsi_max(W,n):
                 #
                 sum = sum + abs(W[i,j])
                 
-        v[i] = W[i,i] + sum   
-        #        
-    return v.max()#, y.argmax(), x[y.argmax(),y.argmax()]  
+        v[i] = W[i,i] + sum
+        #
+    return v.max()#, y.argmax(), x[y.argmax(),y.argmax()]
     #
 #
 #
 #============================================================================    
 def epsi_min(W,n):
-    #    
+    #
     v = np.zeros(n)
     #
     for i in range(n):
@@ -459,9 +457,9 @@ def epsi_min(W,n):
             #
             if (i != j):
                 #
-                sum = sum + abs(W[i,j])                
+                sum = sum + abs(W[i,j])
             #
-        #        
-        v[i] = W[i,i] - sum   
+        #
+        v[i] = W[i,i] - sum
         #
     return v.min()#, y.argmin(), x[y.argmin(),y.argmin()]
