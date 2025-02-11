@@ -221,7 +221,7 @@ Keyword argument "init_dm" is replaced by "dm0"''')
         else:
             t_ini = time.process_time()
             focktilde = dmp.get_focktilde(fock, s1e_invsqrt)
-            X, niter = dmp.dm_purify(H=focktilde, N=N, Ne=Ne, method='trs4', thr=1e-8, maxiter=50)
+            X, niter = dmp.dm_purify(H=focktilde, N=N, Ne=Ne, method='hpcp', thr=1e-8, maxiter=50)
             dm = dmp.get_dm(X, s1e_invsqrt)
             mo_energy = numpy.zeros((N))
             mo_coeff = numpy.zeros((N,N))
