@@ -4,25 +4,30 @@ from pyscf import gto, scf
 from pyscf import lib
 import numpy
 import importlib.util
+import os
 print(importlib.util.find_spec('pyscf'))
 
 # List of basis
-basis_list = 'basis.list'
+basis_list = 'basis_list.list'
 
-# Open basis_list
-basis_list = [ ]
-f = open(basis_list,'r')
+# Open basis_list and store each basis name
+with open(basis_list, 'r') as f:
+    basis = [line.strip() for line in f]  # Read lines and remove whitespace
 
 #convergence settings
 conv_tolerance = 1e-10
 
-# Loop over each molecule
-for basis in basis_list:
-    print(f"\nProcessing basis: {basis}")
+# Directory for molecule files
+molecule_dir = 'xyz'
+
+# Loop over each basis
+for basis in basis:
+    print("Processing basis:", basis)
 
     mol = gto.Mole()
-    mol.atom = open('anthracene.xyz').read()
-    mol.basis = open(basis).read() # Read basis
+    molecule_path = os.path.join(molecule_dir, 'benzene.xyz')
+    mol.atom = open(molecule_path).read()
+    mol.basis = basis # Read basis
     mol.verbose = 4 
     mol.build()
 
