@@ -178,11 +178,11 @@ Keyword argument "init_dm" is replaced by "dm0"''')
 
         fock = mf.get_fock(h1e, s1e, vhf, dm, cycle, mf_diis, fock_last=fock_last)
         
-        t_ini = time.process_time()
+        t_ini = time.perf_counter()
         mo_energy, mo_coeff = mf.eig(fock, s1e)
         mo_occ = mf.get_occ(mo_energy, mo_coeff)
         dm = mf.make_rdm1(mo_coeff, mo_occ)
-        t_fin = time.process_time()
+        t_fin = time.perf_counter()
         t_d = t_d + t_fin - t_ini
 
         vhf = mf.get_veff(mol, dm, dm_last, vhf)
