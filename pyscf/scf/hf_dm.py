@@ -210,23 +210,23 @@ Keyword argument "init_dm" is replaced by "dm0"''')
         #print(fock[1])
 
         if ( not dmp_scf ):
-            t_ini = time.process_time()
+            t_ini = time.perf_counter()
             mo_energy, mo_coeff = mf.eig(fock, s1e)
             mo_occ = mf.get_occ(mo_energy, mo_coeff)
             dm = mf.make_rdm1(mo_coeff, mo_occ)
-            t_fin = time.process_time()
+            t_fin = time.perf_counter()
             t_d = t_d + t_fin - t_ini
             #print('dm')
             #print(dm)
         else:
-            t_ini = time.process_time()
+            t_ini = time.perf_counter()
             focktilde = dmp.get_focktilde(fock, s1e_invsqrt)
             X, niter = dmp.dm_purify(H=focktilde, N=N, Ne=Ne, method='hpcp', thr=1e-8, maxiter=50)
             dm = dmp.get_dm(X, s1e_invsqrt)
             mo_energy = numpy.zeros((N))
             mo_coeff = numpy.zeros((N,N))
             mo_occ = numpy.zeros((N))
-            t_fin =time.process_time()
+            t_fin =time.perf_counter()
             t_p = t_p + t_fin - t_ini
         vhf = mf.get_veff(mol, dm, dm_last, vhf)
         e_tot = mf.energy_tot(dm, h1e, vhf)
