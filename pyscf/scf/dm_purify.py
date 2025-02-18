@@ -6,10 +6,10 @@ def invsqrt_ovlp_diag(S):
     return np.matmul(S_eigvec,np.matmul(np.diag(S_eigval**(-0.5) ), S_eigvec.T))
 
 def get_focktilde(F,Sinvsqrt):
-    if (F.ndim == 2 ): 
+    if (F.ndim == 2 ):
         Ftilde = np.matmul(np.matmul(Sinvsqrt,F),Sinvsqrt)
         return Ftilde
-    elif(F.ndim == 3 ):  
+    elif(F.ndim == 3 ):
         Ftilde_a = np.matmul(np.matmul(Sinvsqrt,F[0]),Sinvsqrt)
         Ftilde_b = np.matmul(np.matmul(Sinvsqrt,F[1]),Sinvsqrt)
         return np.array([Ftilde_a,Ftilde_b])
@@ -50,10 +50,10 @@ def hpcp_guess(H,N,Ne,*args):
     else:
         print('WARNING: Ne',Ne)
 
-    I = np.eye(N, N)  
+    I = np.eye(N, N)
 
     #Restricted = 1 density matrix
-    if ( H.ndim == 2 ):  
+    if ( H.ndim == 2 ):
 
         epsi_0 = epsi_min(H,N)
         epsi_N = epsi_max(H,N)
@@ -68,7 +68,7 @@ def hpcp_guess(H,N,Ne,*args):
         beta1 = theta
         beta2 = min(lambd1, lambd2)
 
-        X0 = beta1*I + beta2*(mu*I - H) 
+        X0 = beta1*I + beta2*(mu*I - H)
 
         return X0
 
@@ -104,7 +104,7 @@ def hpcp_guess(H,N,Ne,*args):
 def hpcp(X,Ne):
     c = np.float64(0.0)
     c1= np.float64(0.0)
-    c2= np.float64(0.0)    
+    c2= np.float64(0.0)
 
     #X = csr_matrix(X)
 
@@ -112,10 +112,10 @@ def hpcp(X,Ne):
     X_3 = X_2 @ X
 
     c1 = np.float64( np.trace(X_2 - X_3) )
-    c2 = np.float64( np.trace(X   - X_2) )   
+    c2 = np.float64( np.trace(X   - X_2) )
 
     #c1 = float64( csr_matrix.trace(X_2 - X_3) )
-    #c2 = float64( csr_matrix.trace(X   - X_2) )   
+    #c2 = float64( csr_matrix.trace(X   - X_2) )
 
     if ( abs(c1) < 1e-8 ):
         c = np.float64(0.50)
@@ -132,7 +132,7 @@ def hpcp(X,Ne):
 def hpcp_purify(X0,Ne,thr=1e-8,maxiter=50):
 
     #Restricted = 1 density matrix
-    if ( X0.ndim == 2 ): 
+    if ( X0.ndim == 2 ):
         threshold = thr
         test = threshold*10
         iter_ = 0
@@ -151,7 +151,7 @@ def hpcp_purify(X0,Ne,thr=1e-8,maxiter=50):
         return X, iter_
 
     # Unrestricted = 2 density matrices
-    elif ( X0.ndim == 3 ):  
+    elif ( X0.ndim == 3 ):
 
         threshold = thr
         test_a = threshold*10
@@ -200,22 +200,22 @@ def tc2_guess(H,N,Ne,*args):
     else:
         print('WARNING: Ne',Ne)
 
-    I = np.eye(N, N)   
+    I = np.eye(N, N)
 
     #Restricted = 1 density matrix
-    if ( H.ndim == 2 ): 
+    if ( H.ndim == 2 ):
 
         epsi_0 = epsi_min(H,N)
-        epsi_N = epsi_max(H,N) 
+        epsi_N = epsi_max(H,N)
 
         X0 = (epsi_N*I - H) / (epsi_N - epsi_0)
 
         return X0
 
-    # Unrestricted = 2 density matrices   
-    elif ( H.ndim == 3 ):    
+    # Unrestricted = 2 density matrices
+    elif ( H.ndim == 3 ):
 
-        epsi_0_a  = epsi_min(H[0],N) 
+        epsi_0_a  = epsi_min(H[0],N)
         epsi_N_a  = epsi_max(H[0],N)
         epsi_0_b  = epsi_min(H[1],N)
         epsi_N_b  = epsi_max(H[1],N)
@@ -241,7 +241,7 @@ def tc2(X,Ne):
 def tc2_purify(X0,Ne,thr=1e-8,maxiter=50):
 
     #Restricted = 1 density matrix
-    if ( X0.ndim == 2 ): 
+    if ( X0.ndim == 2 ):
         threshold = thr
         test = threshold*10
         iter_ = 0
@@ -308,7 +308,7 @@ def trs4_guess(H,N,Ne,*args):
         Ne = Ne[0]
     else:
         print('WARNING: Ne',Ne)
-  
+
     I = np.eye(N, N)
 
     #Restricted = 1 density matrix
@@ -426,7 +426,7 @@ def trs4_purify(X0,Ne,thr=1e-8,maxiter=50):
 
 def epsi_max(W,n):
     #
-    v = np.zeros(n) 
+    v = np.zeros(n)
     #
     for i in range(n):
         #
@@ -437,14 +437,14 @@ def epsi_max(W,n):
             if (i != j):
                 #
                 sum = sum + abs(W[i,j])
-                
+
         v[i] = W[i,i] + sum
         #
     return v.max()#, y.argmax(), x[y.argmax(),y.argmax()]
     #
 #
 #
-#============================================================================    
+#============================================================================
 def epsi_min(W,n):
     #
     v = np.zeros(n)
