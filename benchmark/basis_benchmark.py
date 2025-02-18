@@ -44,5 +44,6 @@ for basis in basis:
     # Print results
     print(f'e_tot_rhf for {basis}: {e_tot_rhf:.6f}')
     print(f'e_tot_rhf_dm for {basis}: {e_tot_rhf_dm:.6f}')
-    print(f'Matrix size (NAO): {mol.nao_nr()}')
-     
+    print(f'number of contracted GTO: {mol.nao_nr()}')
+    print(f'number of occupied states: {sum(mf.mo_occ > 0)}')
+    print('filling factor: ', sum(mf.mo_occ > 0)/mol.nao_nr())
