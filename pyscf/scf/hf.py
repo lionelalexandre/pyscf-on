@@ -177,7 +177,7 @@ Keyword argument "init_dm" is replaced by "dm0"''')
         last_hf_e = e_tot
 
         fock = mf.get_fock(h1e, s1e, vhf, dm, cycle, mf_diis, fock_last=fock_last)
-        
+
         t_ini = time.perf_counter()
         mo_energy, mo_coeff = mf.eig(fock, s1e)
         mo_occ = mf.get_occ(mo_energy, mo_coeff)
