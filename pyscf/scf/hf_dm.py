@@ -50,7 +50,7 @@ MUTE_CHKFILE = getattr(__config__, 'scf_hf_SCF_mute_chkfile', False)
 def kernel(mf, conv_tol=1e-10, conv_tol_grad=None,
            dump_chk=True, dm0=None, callback=None, conv_check=True, dmp_scf=False, **kwargs):
     '''kernel: the SCF driver.
-    
+
     Args:
         mf : an instance of SCF class
             mf object holds all parameters to control SCF.  One can modify its
@@ -221,7 +221,7 @@ Keyword argument "init_dm" is replaced by "dm0"''')
         else:
             t_ini = time.perf_counter()
             focktilde = dmp.get_focktilde(fock, s1e_invsqrt)
-            X, niter = dmp.dm_purify(H=focktilde, N=N, Ne=Ne, method='hpcp', thr=1e-8, maxiter=50)
+            X, niter = dmp.dm_purify(H=focktilde, N=N, Ne=Ne, method='trs4', thr=1e-8, maxiter=50)
             dm = dmp.get_dm(X, s1e_invsqrt)
             mo_energy = numpy.zeros((N))
             mo_coeff = numpy.zeros((N,N))
