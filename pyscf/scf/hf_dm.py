@@ -48,7 +48,8 @@ TIGHT_GRAD_CONV_TOL = getattr(__config__, 'scf_hf_kernel_tight_grad_conv_tol', T
 MUTE_CHKFILE = getattr(__config__, 'scf_hf_SCF_mute_chkfile', False)
 
 def kernel(mf, conv_tol=1e-10, conv_tol_grad=None,
-           dump_chk=True, dm0=None, callback=None, conv_check=True, dmp_scf=False, **kwargs):
+           dump_chk=True, dm0=None, callback=None, conv_check=True, 
+           dmp_scf=False, dmp_scf_thr=1e-8, dmp_scf_otf=False, **kwargs):
     '''kernel: the SCF driver.
 
     Args:
@@ -120,6 +121,8 @@ Keyword argument "init_dm" is replaced by "dm0"''')
     if conv_tol_grad is None:
         conv_tol_grad = numpy.sqrt(conv_tol)
         logger.info(mf, 'Set gradient conv threshold to %g', conv_tol_grad)
+
+    print('dmp_scf_thr =',dmp_scf_thr)
 
     t0 = time.process_time() #LAT
     mol = mf.mol
@@ -194,6 +197,9 @@ Keyword argument "init_dm" is replaced by "dm0"''')
     # A preprocessing hook before the SCF iteration
     mf.pre_kernel(locals())
 
+    if dmp_scf_otf:        
+        dmp_scf_thr = 1e-4
+
     fock_last = None
     cput1 = logger.timer(mf, 'initialize scf', *cput0)
     mf.cycles = 0
@@ -219,15 +225,19 @@ Keyword argument "init_dm" is replaced by "dm0"''')
             #print('dm')
             #print(dm)
         else:
+            print('TOTO dmp_scf_thr =',dmp_scf_thr)
             t_ini = time.perf_counter()
             focktilde = dmp.get_focktilde(fock, s1e_invsqrt)
-            X, niter = dmp.dm_purify(H=focktilde, N=N, Ne=Ne, method='trs4', thr=1e-8, maxiter=50)
+            X, niter = dmp.dm_purify(H=focktilde, N=N, Ne=Ne, method='hpcp', thr=dmp_scf_thr, maxiter=50)
             dm = dmp.get_dm(X, s1e_invsqrt)
             mo_energy = numpy.zeros((N))
             mo_coeff = numpy.zeros((N,N))
             mo_occ = numpy.zeros((N))
             t_fin =time.perf_counter()
             t_p = t_p + t_fin - t_ini
+            
+            print('number of purification iterations =', niter)
+
         vhf = mf.get_veff(mol, dm, dm_last, vhf)
         e_tot = mf.energy_tot(dm, h1e, vhf)
 
@@ -256,6 +266,13 @@ Keyword argument "init_dm" is replaced by "dm0"''')
         elif abs(e_tot-last_hf_e) < conv_tol and norm_gorb < conv_tol_grad:
             scf_conv = True
 
+        elif dmp_scf_otf:
+            if  ( abs(e_tot-last_hf_e)/conv_tol * 1e-8 > 1e-2 ):
+                dmp_scf_thr = 1e-4
+            else:
+                dmp_scf_thr = abs(e_tot-last_hf_e)/conv_tol * 1e-8
+            print('otf dmp_scf_thr =' ,abs(e_tot-last_hf_e)/conv_tol * 1e-8)
+
         if dump_chk and mf.chkfile:
             mf.dump_chk(locals())
 
@@ -268,7 +285,7 @@ Keyword argument "init_dm" is replaced by "dm0"''')
             break
     #print('diagonalization time', t_d)
     print('purification time', t_p)
-    print('number of purification iterations =', niter)
+    #print('number of purification iterations =', niter)
 
     mf.cycles = cycle + 1
     if scf_conv and conv_check:
@@ -1748,6 +1765,8 @@ class SCF(lib.StreamObject):
     direct_scf_tol = getattr(__config__, 'scf_hf_SCF_direct_scf_tol', 1e-13)
     conv_check = getattr(__config__, 'scf_hf_SCF_conv_check', True)
     dmp_scf = getattr(__config__, 'scf_hf_SCF_dmp_scf', False)
+    dmp_scf_thr = getattr(__config__, 'scf_hf_SCF_dmp_scf_thr', 1e-8)
+    dmp_scf_otf = getattr(__config__, 'scf_hf_SCF_dmp_scf_otf', False)
 
     callback = None
 
@@ -1758,7 +1777,7 @@ class SCF(lib.StreamObject):
         'direct_scf', 'direct_scf_tol', 'conv_check', 'callback',
         'mol', 'chkfile', 'mo_energy', 'mo_coeff', 'mo_occ',
         'e_tot', 'converged', 'cycles', 'scf_summary', 'opt',
-        'disp', 'disp_with_3body', 'dmp_scf',
+        'disp', 'disp_with_3body', 'dmp_scf', 'dmp_scf_thr','dmp_scf_otf',
     }
 
     def __init__(self, mol):

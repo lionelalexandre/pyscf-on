@@ -29,17 +29,17 @@ def dm_purify(H,N,Ne,method,thr,maxiter):
     if (method == 'hpcp') :
 
         X0 = hpcp_guess(H,N,Ne)
-        X, niter = hpcp_purify(X0,Ne,thr=1e-10,maxiter=50)
+        X, niter = hpcp_purify(X0,Ne,thr=thr,maxiter=50)
 
     if (method == 'tc2') :
 
         X0 = tc2_guess(H,N,Ne)
-        X, niter = tc2_purify(X0,Ne,thr=1e-10,maxiter=50)
+        X, niter = tc2_purify(X0,Ne,thr=thr,maxiter=50)
 
     if (method == 'trs4') :
 
         X0 = trs4_guess(H,N,Ne)
-        X, niter = trs4_purify(X0,Ne,thr=1e-10,maxiter=50)
+        X, niter = trs4_purify(X0,Ne,thr=thr,maxiter=50)
 
     return X, niter
 
