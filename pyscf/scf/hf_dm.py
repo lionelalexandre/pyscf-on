@@ -49,7 +49,7 @@ MUTE_CHKFILE = getattr(__config__, 'scf_hf_SCF_mute_chkfile', False)
 
 def kernel(mf, conv_tol=1e-10, conv_tol_grad=None,
            dump_chk=True, dm0=None, callback=None, conv_check=True, 
-           dmp_scf=False, dmp_scf_thr=1e-8, dmp_scf_otf=False, **kwargs):
+           dmp_scf=False, dmp_scf_thr=1e-8, dmp_scf_otf=False, dmp_method='hpcp', **kwargs):
     '''kernel: the SCF driver.
 
     Args:
@@ -205,6 +205,8 @@ Keyword argument "init_dm" is replaced by "dm0"''')
     mf.cycles = 0
     t_d = 0
     t_p = 0
+    niter_sum = 0
+    niter_list = []
     for cycle in range(mf.max_cycle):
         dm_last = dm
         last_hf_e = e_tot
@@ -225,10 +227,10 @@ Keyword argument "init_dm" is replaced by "dm0"''')
             #print('dm')
             #print(dm)
         else:
-            print('TOTO dmp_scf_thr =',dmp_scf_thr)
+            print('dmp_scf_thr =',dmp_scf_thr)
             t_ini = time.perf_counter()
             focktilde = dmp.get_focktilde(fock, s1e_invsqrt)
-            X, niter = dmp.dm_purify(H=focktilde, N=N, Ne=Ne, method='hpcp', thr=dmp_scf_thr, maxiter=50)
+            X, niter = dmp.dm_purify(H=focktilde, N=N, Ne=Ne, method=dmp_method, thr=dmp_scf_thr, maxiter=50)
             dm = dmp.get_dm(X, s1e_invsqrt)
             mo_energy = numpy.zeros((N))
             mo_coeff = numpy.zeros((N,N))
@@ -237,7 +239,8 @@ Keyword argument "init_dm" is replaced by "dm0"''')
             t_p = t_p + t_fin - t_ini
             
             print('number of purification iterations =', niter)
-
+        niter_sum += niter
+        niter_list.append(niter)
         vhf = mf.get_veff(mol, dm, dm_last, vhf)
         e_tot = mf.energy_tot(dm, h1e, vhf)
 
@@ -285,7 +288,10 @@ Keyword argument "init_dm" is replaced by "dm0"''')
             break
     #print('diagonalization time', t_d)
     print('purification time', t_p)
-    #print('number of purification iterations =', niter)
+    #here print the average and error bar of niter
+    print('average number of purification iterations =', niter_sum/(cycle+1))
+    print('max number of purification iterations =', max(niter_list))
+    print('min number of purification iterations =', min(niter_list))
 
     mf.cycles = cycle + 1
     if scf_conv and conv_check:
@@ -1767,6 +1773,7 @@ class SCF(lib.StreamObject):
     dmp_scf = getattr(__config__, 'scf_hf_SCF_dmp_scf', False)
     dmp_scf_thr = getattr(__config__, 'scf_hf_SCF_dmp_scf_thr', 1e-8)
     dmp_scf_otf = getattr(__config__, 'scf_hf_SCF_dmp_scf_otf', False)
+    dmp_method = getattr(__config__, 'scf_hf_SCF_dmp_method', 'hpcp')
 
     callback = None
 
@@ -1777,7 +1784,7 @@ class SCF(lib.StreamObject):
         'direct_scf', 'direct_scf_tol', 'conv_check', 'callback',
         'mol', 'chkfile', 'mo_energy', 'mo_coeff', 'mo_occ',
         'e_tot', 'converged', 'cycles', 'scf_summary', 'opt',
-        'disp', 'disp_with_3body', 'dmp_scf', 'dmp_scf_thr','dmp_scf_otf',
+        'disp', 'disp_with_3body', 'dmp_scf', 'dmp_scf_thr','dmp_scf_otf','dmp_scf_method'
     }
 
     def __init__(self, mol):
