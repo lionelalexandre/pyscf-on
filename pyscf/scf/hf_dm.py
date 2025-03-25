@@ -48,7 +48,7 @@ TIGHT_GRAD_CONV_TOL = getattr(__config__, 'scf_hf_kernel_tight_grad_conv_tol', T
 MUTE_CHKFILE = getattr(__config__, 'scf_hf_SCF_mute_chkfile', False)
 
 def kernel(mf, conv_tol=1e-10, conv_tol_grad=None,
-           dump_chk=True, dm0=None, callback=None, conv_check=True, 
+           dump_chk=True, dm0=None, callback=None, conv_check=True, dmp_fmt='np',
            dmp_scf=False, dmp_scf_thr=1e-8, dmp_scf_otf=False, dmp_method='hpcp', **kwargs):
     '''kernel: the SCF driver.
 
@@ -230,7 +230,7 @@ Keyword argument "init_dm" is replaced by "dm0"''')
             print('dmp_scf_thr =',dmp_scf_thr)
             t_ini = time.perf_counter()
             focktilde = dmp.get_focktilde(fock, s1e_invsqrt)
-            X, niter = dmp.dm_purify(H=focktilde, N=N, Ne=Ne, method=dmp_method, thr=dmp_scf_thr, maxiter=50)
+            X, niter = dmp.dm_purify(H=focktilde, N=N, Ne=Ne, method=dmp_method,fmt=dmp_fmt, thr=dmp_scf_thr, maxiter=50)
             dm = dmp.get_dm(X, s1e_invsqrt)
             mo_energy = numpy.zeros((N))
             mo_coeff = numpy.zeros((N,N))
@@ -1774,6 +1774,7 @@ class SCF(lib.StreamObject):
     dmp_scf_thr = getattr(__config__, 'scf_hf_SCF_dmp_scf_thr', 1e-8)
     dmp_scf_otf = getattr(__config__, 'scf_hf_SCF_dmp_scf_otf', False)
     dmp_method = getattr(__config__, 'scf_hf_SCF_dmp_method', 'hpcp')
+    dmp_fmt = getattr(__config__, 'scf_hf_SCF_dmp_fmt', 'np')
 
     callback = None
 
