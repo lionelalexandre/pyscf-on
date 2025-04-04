@@ -1,6 +1,7 @@
 from scipy.sparse import csr_matrix
 import numpy as np
-from lib_dm import mm
+from pyscf import lib
+from pyscf.scf.lib_dm import mm
 
 def invsqrt_ovlp_diag(S):
     S_eigval, S_eigvec = np.linalg.eigh(S)
@@ -171,24 +172,24 @@ def hpcp_es(X,Ne):
     return X, 0, p
 
 def hpcp_tf(X,Ne):
-    c = np.float64(0.0)
-    c1= np.float64(0.0)
-    c2= np.float64(0.0)
+    c = (0.0)
+    c1= (0.0)
+    c2= (0.0)
 
     #X = csr_matrix(X)
-    X_tf = convert_to_tensor(X)
+    #X_tf = convert_to_tensor(X)
 
-    X_2 = mm(X_tf,X_tf,method='tf',dtype='float32')
-    X_3 = mm(X_2,X_tf,method='tf',dtype='float32')
+    X_2 = mm(X,X,method='tf',dtype='float32')
+    X_3 = mm(X_2,X,method='tf',dtype='float32')
 
-    c1 = np.float64( np.trace(X_2 - X_3) )
-    c2 = np.float64( np.trace(X   - X_2) )
+    c1 = ( tf.linalg.trace(X_2 - X_3) )
+    c2 = ( tf.linalg.trace(X   - X_2) )
 
     #c1 = float64( csr_matrix.trace(X_2 - X_3) )
     #c2 = float64( csr_matrix.trace(X   - X_2) )
 
     if ( abs(c1) < 1e-8 ):
-        c = np.float64(0.50)
+        c = (0.50)
 
     else:
         c = c1/c2
@@ -341,11 +342,11 @@ def hpcp_purify_tf(X0,Ne,thr=1e-8,maxiter=50):
             old_X = X
             X, diag, p = hpcp_tf(X,Ne)
 
-            test = np.linalg.norm(X - old_X, ord='fro')
+            test = tf.norm(X - old_X, ord='fro')
             #print(test,numpy.shape(X),type(X))
             #    print(test,numpy.trace(X))
             iter_ += 1
-
+        X = X.numpy()
         #print(linalg.eigh(X))
         return X, iter_
 
@@ -366,7 +367,7 @@ def hpcp_purify_tf(X0,Ne,thr=1e-8,maxiter=50):
 
             X_a, diag_a, p_a = hpcp_tf(X_a,Ne[0])
 
-            test_a = np.linalg.norm(X_a - old_X_a, ord='fro')
+            test_a = tf.norm(X_a - old_X_a, ord='fro')
             # occ, _ = linalg.eigh(X_a)
             # print('X_a',test_a,numpy.trace(X_a),p_a[0],p_a[1],p_a[2])
             # print(occ)
@@ -379,7 +380,7 @@ def hpcp_purify_tf(X0,Ne,thr=1e-8,maxiter=50):
 
             X_b, diag_b, p_b = hpcp_tf(X_b,Ne[1])
 
-            test_b = np.linalg.norm(X_b - old_X_b, ord='fro')
+            test_b = tf.norm(X_b - old_X_b, ord='fro')
             #occ, _ = linalg.eigh(X_b)
             #print(test_a,numpy.shape(X_a),type(X_a),numpy.trace(X_a))
             #print('X_b',test_b,numpy.trace(X_b))
@@ -390,7 +391,8 @@ def hpcp_purify_tf(X0,Ne,thr=1e-8,maxiter=50):
         #print('X_a',numpy.trace(X_a))
         #print(linalg.eigh(X_a))
         #print(linalg.eigh(X_b))
-
+        X_a = X_a.numpy()
+        X_b = X_b.numpy()
         return np.array([X_a,X_b]), [iter_a,iter_b]
 
 def tc2_guess(H,N,Ne,*args):
@@ -454,15 +456,14 @@ def tc2_es(X,Ne):
 def tc2_tf(X,Ne):
 
     #X = csr_matrix(X)
-    X_tf = convert_to_tensor(X)
 
-    X_2 = mm(X_tf,X_tf,method='tf',dtype='float32')
-    trace_X = np.trace(X)
+    X_2 = mm(X,X,method='tf',dtype='float32')
+    trace_X = tf.linalg.trace(X)
     if np.all(trace_X >= Ne):
         X = X_2
 
     else:
-        X = 2*X_tf - X_2
+        X = 2*X - X_2
     return X
 
 def tc2_purify_np(X0,Ne,thr=1e-8,maxiter=50):
@@ -608,12 +609,13 @@ def tc2_purify_tf(X0,Ne,thr=1e-8,maxiter=50):
 
             X = tc2_tf(X,Ne)
 
-            test = np.linalg.norm(X - old_X, ord='fro')
+            test = tf.norm(X - old_X, ord='fro')
             #print(test,numpy.shape(X),type(X))
             #print(test,numpy.trace(X))
             iter_ += 1
 
         #print(linalg.eigh(X))
+        X = X.numpy()
         return X, iter_
     # Unrestricted = 2 density matrices
     elif ( X0.ndim == 3 ):
@@ -632,7 +634,7 @@ def tc2_purify_tf(X0,Ne,thr=1e-8,maxiter=50):
 
             X_a = tc2_tf(X_a,Ne[0])
 
-            test_a = np.linalg.norm(X_a - old_X_a, ord='fro')
+            test_a = tf.norm(X_a - old_X_a, ord='fro')
             #occ, _ = linalg.eigh(X_a)
             #print('X_a',test_a,numpy.trace(X_a),p_a[0],p_a[1],p_a[2])
             #print(occ)
@@ -645,7 +647,7 @@ def tc2_purify_tf(X0,Ne,thr=1e-8,maxiter=50):
 
             X_b = tc2_tf(X_b,Ne[1])
 
-            test_b = np.linalg.norm(X_b - old_X_b, ord='fro')
+            test_b = tf.norm(X_b - old_X_b, ord='fro')
             #occ, _ = linalg.eigh(X_b)
             #print(test_a,numpy.shape(X_a),type(X_a),numpy.trace(X_a))
             #print('X_b',test_b,numpy.trace(X_b))
@@ -656,7 +658,8 @@ def tc2_purify_tf(X0,Ne,thr=1e-8,maxiter=50):
         #print('X_a',numpy.trace(X_a))
         #print(linalg.eigh(X_a))
         #print(linalg.eigh(X_b))
-
+        X_a = X_a.numpy()
+        X_b = X_b.numpy()
         return np.array([X_a,X_b]), [iter_a,iter_b]
 
 def trs4_guess(H,N,Ne,*args):
@@ -746,15 +749,14 @@ def trs4_es(X,Ne):
 def trs4_tf(X,Ne):
 
     #X = csr_matrix(X)
-    X_tf = convert_to_tensor(X)
 
-    X_2 = mm(X_tf,X_tf,method='tf',dtype='float32')
+    X_2 = mm(X,X,method='tf',dtype='float32')
     I = np.eye(X.shape[0])
     I_X = I - X
     F = mm(X_2,(4*X - 3*X_2),method='tf',dtype='float32')
     G = mm(X_2,((I_X) @ (I_X)),method='tf',dtype='float32')
-    trace_F = np.trace(F)
-    trace_G = np.trace(G)
+    trace_F = tf.linalg.trace(F)
+    trace_G = tf.linalg.trace(G)
     gamma_n = (Ne[0] - trace_F) / trace_G
     gamma_min = 0
     gamma_max = 6
@@ -913,12 +915,13 @@ def trs4_purify_tf(X0,Ne,thr=1e-8,maxiter=50):
 
             X = trs4_tf(X,Ne)
 
-            test = np.linalg.norm(X - old_X, ord='fro')
+            test = tf.norm(X - old_X, ord='fro')
             #print(test,numpy.shape(X),type(X))
             #    print(test,numpy.trace(X))
             iter_ += 1
 
         #print(linalg.eigh(X))
+        X = X.numpy()
         return X, iter_
     # Unrestricted = 2 density matrices
     elif ( X0.ndim == 3 ):
@@ -937,7 +940,7 @@ def trs4_purify_tf(X0,Ne,thr=1e-8,maxiter=50):
 
             X_a = trs4_tf(X_a,Ne[0])
 
-            test_a = np.linalg.norm(X_a - old_X_a, ord='fro')
+            test_a = tf.norm(X_a - old_X_a, ord='fro')
             #occ, _ = linalg.eigh(X_a)
             #print('X_a',test_a,numpy.trace(X_a),p_a[0],p_a[1],p_a[2])
             #print(occ)
@@ -950,7 +953,7 @@ def trs4_purify_tf(X0,Ne,thr=1e-8,maxiter=50):
 
             X_b = trs4_tf(X_b,Ne[1])
 
-            test_b = np.linalg.norm(X_b - old_X_b, ord='fro')
+            test_b = tf.norm(X_b - old_X_b, ord='fro')
             #occ, _ = linalg.eigh(X_b)
             #print(test_a,numpy.shape(X_a),type(X_a),numpy.trace(X_a))
             #print('X_b',test_b,numpy.trace(X_b))
@@ -961,7 +964,8 @@ def trs4_purify_tf(X0,Ne,thr=1e-8,maxiter=50):
         #print('X_a',numpy.trace(X_a))
         #print(linalg.eigh(X_a))
         #print(linalg.eigh(X_b))
-
+        X_a = X_a.numpy()
+        X_b = X_b.numpy()
         return np.array([X_a,X_b]), [iter_a,iter_b]
 
 def epsi_max(W,n):
