@@ -42,7 +42,7 @@ for mol_file in molecules:
 
     # purification
     mf = scf.RHF_DM(mol).set(conv_tol=conv_tolerance, conv_check=True)
-    mf.kernel(dmp_scf=True)
+    mf.kernel(dmp_scf=True, dmp_fmt='np')
     e_tot_rhf_dm = mf.energy_tot()
 
     # Print results

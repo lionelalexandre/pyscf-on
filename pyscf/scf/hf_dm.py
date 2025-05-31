@@ -236,7 +236,8 @@ Keyword argument "init_dm" is replaced by "dm0"''')
             mo_coeff = numpy.zeros((N,N))
             mo_occ = numpy.zeros((N))
             t_fin =time.perf_counter()
-            t_p = t_p + t_fin - t_ini
+            t_p = t_p + t_fin - t_ini 
+            
             
             print('number of purification iterations =', niter)
         niter_sum += niter

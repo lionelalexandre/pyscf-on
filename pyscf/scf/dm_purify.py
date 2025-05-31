@@ -2,6 +2,10 @@ from scipy.sparse import csr_matrix
 import numpy as np
 from pyscf import lib
 from pyscf.scf.lib_dm import mm
+import tensorflow as tf
+from tensorflow import convert_to_tensor
+from time import perf_counter
+#from pyscf.scf import get_occ
 
 def invsqrt_ovlp_diag(S):
     S_eigval, S_eigvec = np.linalg.eigh(S)
@@ -54,6 +58,16 @@ def dm_purify(H,N,Ne,method,fmt,thr,maxiter):
             X, niter = trs4_purify_es(X0,Ne,thr=thr,maxiter=50)
         elif (fmt == 'tf'):
             X, niter = trs4_purify_tf(X0,Ne,thr=thr,maxiter=50)
+    
+    if (method == 'tc2acc') : 
+        X0,betal,betah = tc2acc_guess(H,N,Ne)
+        if (fmt == 'np'):
+            X, niter = tc2acc_purify_np(X0,Ne,betal,betah,thr=thr,maxiter=50)
+        elif (fmt == 'es'):
+            X, niter = tc2acc_purify_es(X0,Ne,thr=thr,maxiter=50)
+        # elif (fmt == 'tf'):
+        #     X, niter = tc2_purify_tf(X0,Ne,thr=thr,maxiter=50)
+
 
     return X, niter
 
@@ -342,7 +356,7 @@ def hpcp_purify_tf(X0,Ne,thr=1e-8,maxiter=50):
             old_X = X
             X, diag, p = hpcp_tf(X,Ne)
 
-            test = tf.norm(X - old_X, ord='fro')
+            test = tf.norm(X - old_X)#, ord='fro')
             #print(test,numpy.shape(X),type(X))
             #    print(test,numpy.trace(X))
             iter_ += 1
@@ -609,7 +623,7 @@ def tc2_purify_tf(X0,Ne,thr=1e-8,maxiter=50):
 
             X = tc2_tf(X,Ne)
 
-            test = tf.norm(X - old_X, ord='fro')
+            test = tf.norm(X - old_X)#, ord='fro')
             #print(test,numpy.shape(X),type(X))
             #print(test,numpy.trace(X))
             iter_ += 1
@@ -661,6 +675,316 @@ def tc2_purify_tf(X0,Ne,thr=1e-8,maxiter=50):
         X_a = X_a.numpy()
         X_b = X_b.numpy()
         return np.array([X_a,X_b]), [iter_a,iter_b]
+
+def tc2acc_guess(H,N,Ne,*args):
+    #
+    eigs = np.linalg.eigvalsh(H)
+    #
+    #occ = get_occ(mo_energy=eigs)
+    t_hl0 = perf_counter()
+    ehomo = eigs[Ne[0]-1]
+    elumo = eigs[Ne[0]]
+    print(ehomo)
+    print(elumo)
+    t_hl1 = perf_counter()
+    t_homolumo = t_hl1-t_hl0
+    print('t_homolumo =', t_homolumo)
+
+    if (Ne[0] == Ne[1]):
+        Ne = Ne[0]
+    else:
+        print('WARNING: Ne',Ne)
+
+    I = np.eye(N, N)
+
+    #Restricted = 1 density matrix
+    if ( H.ndim == 2 ):
+
+        epsi_0 = epsi_min(H,N)
+        epsi_N = epsi_max(H,N)
+        betal = (epsi_N-elumo)/(epsi_N-epsi_0)
+        betah = (epsi_N-ehomo)/(epsi_N-epsi_0)
+
+        X0 = (epsi_N*I - H) / (epsi_N - epsi_0)
+
+        return X0, betal, betah
+
+    # Unrestricted = 2 density matrices
+    elif ( H.ndim == 3 ):
+
+        epsi_0_a  = epsi_min(H[0],N)
+        epsi_N_a  = epsi_max(H[0],N)
+        epsi_0_b  = epsi_min(H[1],N)
+        epsi_N_b  = epsi_max(H[1],N)
+
+        X0_a = (epsi_N_a*I - H) / (epsi_N_a - epsi_0_a)
+        X0_b = (epsi_N_b*I - H) / (epsi_N_b - epsi_0_b)
+
+        return np.array([X0_a, X0_b]), betal, betah
+
+
+def tc2acc_np(X,Ne, betal, betah):
+
+    #X = csr_matrix(X)
+
+    trace_X = np.trace(X)
+    I = np.eye(np.shape(X)[0])
+    if np.all(trace_X >= Ne):
+        alpha = 2/(2-betal)
+        X = (1-alpha)*I + alpha*X
+        X = mm(X,X,method='np',dtype='float32')
+        betal = (alpha*betal + 1-alpha)**2
+        betah = (alpha*betah + 1-alpha)**2
+
+    else:
+        alpha = 2/(1+betah)
+        X = alpha*X
+        X_2 = mm(X,X,method='np',dtype='float32')
+        X = 2*X - X_2
+        betal = 2*alpha*betal - alpha**2*betal**2
+        betah = 2*alpha*betah - alpha**2*betah**2
+    return X, betal, betah
+
+def tc2acc_es(X,Ne, betal, betah):
+
+    #X = csr_matrix(X)
+
+    trace_X = np.trace(X)
+    I = np.eye(np.shape(X)[0])
+    if np.all(trace_X >= Ne):
+        alpha = 2/(2-betal)
+        X = (1-alpha)*I + alpha*X
+        X = mm(X,X,method='es',dtype='float32')
+        betal = (alpha*betal + 1-alpha)**2
+        betah = (alpha*betah + 1-alpha)**2
+
+    else:
+        alpha = 2/(1+betah)
+        X = alpha*X
+        X_2 = mm(X,X,method='es',dtype='float32')
+        X = 2*X - X_2
+        betal = 2*alpha*betal - alpha**2*betal**2
+        betah = 2*alpha*betah - alpha**2*betah**2
+    return X, betal, betah
+
+# def tc2acc_tf(X,Ne, betal, betah)):
+
+#     #X = csr_matrix(X)
+
+#     trace_X = tf.linalg.trace(X)
+#     I = np.eye(np.shape(X)[0])
+#     if np.all(trace_X >= Ne):
+#        alpha = 2/(2-betal)
+#        X = (1-alpha)*I + alpha*X
+#        X = mm(X,X,method='es',dtype='float32')
+#        betal = (alpha*betal + 1-alpha)**2
+#        betah = (alpha*betah + 1-alpha)**2
+
+#    else:
+#        alpha = 2/(1+betah)
+#        X = alpha*X
+#        X_2 = mm(X,X,method='es',dtype='float32')
+#        X = 2*X - X_2
+#        betal = 2*alpha*betal - alpha**2*betal**2
+#        betah = 2*alpha*betah - alpha**2*betah**2
+#    return X, betal, betah
+
+
+def tc2acc_purify_np(X0,Ne,betal,betah,thr=1e-8,maxiter=50):
+
+    #Restricted = 1 density matrix
+    if ( X0.ndim == 2 ):
+        threshold = thr
+        test = threshold*10
+        iter_ = 0
+        X = X0
+
+        while ( test > threshold ) and ( iter_ < maxiter ):
+            old_X = X
+
+            X,betal,betah = tc2acc_np(X,Ne, betal, betah)
+
+            test = np.linalg.norm(X - old_X, ord='fro')
+            #print(test,numpy.shape(X),type(X))
+            #print(test,numpy.trace(X))
+            iter_ += 1
+
+        #print(linalg.eigh(X))
+        return X, iter_
+    # Unrestricted = 2 density matrices
+    elif ( X0.ndim == 3 ):
+
+        threshold = thr
+        test_a = threshold*10
+        test_b = threshold*10
+        iter_a = 0
+        iter_b = 0
+        X_a = X0[0]
+        X_b = X0[1]
+
+        while ( test_a > threshold ) and ( iter_a < maxiter ):
+            old_X_a = X_a
+
+            X_a,betal,betah = tc2acc_np(X_a,Ne[0])
+
+            test_a = np.linalg.norm(X_a - old_X_a, ord='fro')
+            #occ, _ = linalg.eigh(X_a)
+            #print('X_a',test_a,numpy.trace(X_a),p_a[0],p_a[1],p_a[2])
+            #print(occ)
+            #print(test_a,numpy.shape(X_a),type(X_a),numpy.trace(X_a))
+            #print(test_b,numpy.shape(X_b),type(X_b),numpy.trace(X_b))
+            iter_a += 1
+
+        while ( test_b > threshold ) and ( iter_b < maxiter ):
+            old_X_b = X_b
+
+            X_b,betal,betah = tc2_np(X_b,Ne[1])
+
+            test_b = np.linalg.norm(X_b - old_X_b, ord='fro')
+            #occ, _ = linalg.eigh(X_b)
+            #print(test_a,numpy.shape(X_a),type(X_a),numpy.trace(X_a))
+            #print('X_b',test_b,numpy.trace(X_b))
+            #print(occ)
+
+            iter_b += 1
+        #print('X_b',numpy.trace(X_b))
+        #print('X_a',numpy.trace(X_a))
+        #print(linalg.eigh(X_a))
+        #print(linalg.eigh(X_b))
+
+        return np.array([X_a,X_b]), [iter_a,iter_b]
+
+def tc2acc_purify_es(X0,Ne,betal,betah,thr=1e-8,maxiter=50):
+
+    #Restricted = 1 density matrix
+    if ( X0.ndim == 2 ):
+        threshold = thr
+        test = threshold*10
+        iter_ = 0
+        X = X0
+
+        while ( test > threshold ) and ( iter_ < maxiter ):
+            old_X = X
+
+            X,betal,betah = tc2acc_es(X,Ne, betal, betah)
+
+            test = np.linalg.norm(X - old_X, ord='fro')
+            #print(test,numpy.shape(X),type(X))
+            #print(test,numpy.trace(X))
+            iter_ += 1
+
+        #print(linalg.eigh(X))
+        return X, iter_
+    # Unrestricted = 2 density matrices
+    elif ( X0.ndim == 3 ):
+
+        threshold = thr
+        test_a = threshold*10
+        test_b = threshold*10
+        iter_a = 0
+        iter_b = 0
+        X_a = X0[0]
+        X_b = X0[1]
+
+        while ( test_a > threshold ) and ( iter_a < maxiter ):
+            old_X_a = X_a
+
+            X_a,betal,betah = tc2acc_es(X_a,Ne[0])
+
+            test_a = np.linalg.norm(X_a - old_X_a, ord='fro')
+            #occ, _ = linalg.eigh(X_a)
+            #print('X_a',test_a,numpy.trace(X_a),p_a[0],p_a[1],p_a[2])
+            #print(occ)
+            #print(test_a,numpy.shape(X_a),type(X_a),numpy.trace(X_a))
+            #print(test_b,numpy.shape(X_b),type(X_b),numpy.trace(X_b))
+            iter_a += 1
+
+        while ( test_b > threshold ) and ( iter_b < maxiter ):
+            old_X_b = X_b
+
+            X_b,betal,betah = tc2_es(X_b,Ne[1])
+
+            test_b = np.linalg.norm(X_b - old_X_b, ord='fro')
+            #occ, _ = linalg.eigh(X_b)
+            #print(test_a,numpy.shape(X_a),type(X_a),numpy.trace(X_a))
+            #print('X_b',test_b,numpy.trace(X_b))
+            #print(occ)
+
+            iter_b += 1
+        #print('X_b',numpy.trace(X_b))
+        #print('X_a',numpy.trace(X_a))
+        #print(linalg.eigh(X_a))
+        #print(linalg.eigh(X_b))
+
+        return np.array([X_a,X_b]), [iter_a,iter_b]
+
+# def tc2acc_purify_tf(X0,Ne,betal,betah,thr=1e-8,maxiter=50):
+
+#     #Restricted = 1 density matrix
+#     if ( X0.ndim == 2 ):
+#         threshold = thr
+#         test = threshold*10
+#         iter_ = 0
+#         X0_tf = convert_to_tensor(X0)
+#         X = X0_tf
+
+#         while ( test > threshold ) and ( iter_ < maxiter ):
+#             old_X = X
+
+#             X,betal,betah = tc2acc_tf(X,Ne, betal, betah)
+
+#             test = tf.norm(X - old_X, ord='fro')
+#             #print(test,numpy.shape(X),type(X))
+#             #print(test,numpy.trace(X))
+#             iter_ += 1
+
+#         #print(linalg.eigh(X))
+#         X = X.numpy()
+#         return X, iter_
+#     # Unrestricted = 2 density matrices
+#     elif ( X0.ndim == 3 ):
+
+#         threshold = thr
+#         test_a = threshold*10
+#         test_b = threshold*10
+#         iter_a = 0
+#         iter_b = 0
+#         X0_tf = convert_to_tensor(X0)
+#         X_a = X0_tf[0]
+#         X_b = X0tf[1]
+
+#         while ( test_a > threshold ) and ( iter_a < maxiter ):
+#             old_X_a = X_a
+
+#             X_a, betal, betah = tc2acc_tf(X_a,Ne[0], betal, betah)
+
+#             test_a = tf.norm(X_a - old_X_a, ord='fro')
+#             #occ, _ = linalg.eigh(X_a)
+#             #print('X_a',test_a,numpy.trace(X_a),p_a[0],p_a[1],p_a[2])
+#             #print(occ)
+#             #print(test_a,numpy.shape(X_a),type(X_a),numpy.trace(X_a))
+#             #print(test_b,numpy.shape(X_b),type(X_b),numpy.trace(X_b))
+#             iter_a += 1
+
+#         while ( test_b > threshold ) and ( iter_b < maxiter ):
+#             old_X_b = X_b
+
+#             X_b, betal, betah = tc2acc_tf(X_b,Ne[1], betal, betah)
+
+#             test_b = tf.norm(X_b - old_X_b, ord='fro')
+#             #occ, _ = linalg.eigh(X_b)
+#             #print(test_a,numpy.shape(X_a),type(X_a),numpy.trace(X_a))
+#             #print('X_b',test_b,numpy.trace(X_b))
+#             #print(occ)
+
+#             iter_b += 1
+#         #print('X_b',numpy.trace(X_b))
+#         #print('X_a',numpy.trace(X_a))
+#         #print(linalg.eigh(X_a))
+#         #print(linalg.eigh(X_b))
+#         X_a = X_a.numpy()
+#         X_b = X_b.numpy()
+#         return np.array([X_a,X_b]), [iter_a,iter_b]
 
 def trs4_guess(H,N,Ne,*args):
 
@@ -915,7 +1239,7 @@ def trs4_purify_tf(X0,Ne,thr=1e-8,maxiter=50):
 
             X = trs4_tf(X,Ne)
 
-            test = tf.norm(X - old_X, ord='fro')
+            test = tf.norm(X - old_X)#, ord='fro')
             #print(test,numpy.shape(X),type(X))
             #    print(test,numpy.trace(X))
             iter_ += 1
