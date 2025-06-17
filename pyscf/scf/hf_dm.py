@@ -197,7 +197,7 @@ Keyword argument "init_dm" is replaced by "dm0"''')
     # A preprocessing hook before the SCF iteration
     mf.pre_kernel(locals())
 
-    if dmp_scf_otf:        
+    if dmp_scf_otf:   
         dmp_scf_thr = 1e-4
 
     fock_last = None
@@ -236,9 +236,7 @@ Keyword argument "init_dm" is replaced by "dm0"''')
             mo_coeff = numpy.zeros((N,N))
             mo_occ = numpy.zeros((N))
             t_fin =time.perf_counter()
-            t_p = t_p + t_fin - t_ini 
-            
-            
+            t_p = t_p + t_fin - t_ini
             print('number of purification iterations =', niter)
         niter_sum += niter
         niter_list.append(niter)
@@ -269,7 +267,6 @@ Keyword argument "init_dm" is replaced by "dm0"''')
             scf_conv = mf.check_convergence(locals())
         elif abs(e_tot-last_hf_e) < conv_tol and norm_gorb < conv_tol_grad:
             scf_conv = True
-
         elif dmp_scf_otf:
             if  ( abs(e_tot-last_hf_e)/conv_tol * 1e-8 > 1e-2 ):
                 dmp_scf_thr = 1e-4
@@ -497,7 +494,6 @@ def init_guess_by_minao(mol):
                     if frac > 0:
                         occ_l[ndocc] = frac
                     occ4ecp.append(numpy.repeat(occ_l, l * 2 + 1))
-
             occ4ecp = numpy.hstack(occ4ecp)
             basis4ecp = lib.flatten(basis4ecp)
 

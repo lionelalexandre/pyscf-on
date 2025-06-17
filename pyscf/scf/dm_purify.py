@@ -58,8 +58,8 @@ def dm_purify(H,N,Ne,method,fmt,thr,maxiter):
             X, niter = trs4_purify_es(X0,Ne,thr=thr,maxiter=50)
         elif (fmt == 'tf'):
             X, niter = trs4_purify_tf(X0,Ne,thr=thr,maxiter=50)
-    
-    if (method == 'tc2acc') : 
+
+    if (method == 'tc2acc') :
         X0,betal,betah = tc2acc_guess(H,N,Ne)
         if (fmt == 'np'):
             X, niter = tc2acc_purify_np(X0,Ne,betal,betah,thr=thr,maxiter=50)
@@ -208,7 +208,7 @@ def hpcp_tf(X,Ne):
     else:
         c = c1/c2
 
-    X = X_tf + 2 * ( X_2 - X_3 - c * (X_tf - X_2) )
+    X = X + 2 * ( X_2 - X_3 - c * (X - X_2) )
 
     p = [c1,c2,c,0.0,0.0,0.0,0.0]
     #X = numpy.array(X.toarray()) #; print(numpy.shape(X))
@@ -290,7 +290,6 @@ def hpcp_purify_es(X0,Ne,thr=1e-8,maxiter=50):
         while ( test > threshold ) and ( iter_ < maxiter ):
             old_X = X
             X, diag, p = hpcp_es(X,Ne)
-
             test = np.linalg.norm(X - old_X, ord='fro')
             #print(test,numpy.shape(X),type(X))
             #    print(test,numpy.trace(X))
@@ -641,7 +640,7 @@ def tc2_purify_tf(X0,Ne,thr=1e-8,maxiter=50):
         iter_b = 0
         X0_tf = convert_to_tensor(X0)
         X_a = X0_tf[0]
-        X_b = X0tf[1]
+        X_b = X0_tf[1]
 
         while ( test_a > threshold ) and ( iter_a < maxiter ):
             old_X_a = X_a
